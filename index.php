@@ -22,19 +22,23 @@ $app->get('/users','getUsers');
 $app->get("/login/:username/:password/:type",'login');
 $app->get("/getProfile/:username",'getProfile');
 $app->post('/signup','signup');
+$app->get("/getMyEvents/:userid/:eventid",'getMyEvents');
+$app->get("/getEventUserList/:eventid",'getEventUserList');
+$app->get("/getEventFeedByEventId/:userid/:eventid",'getEventFeedByEventId');
 
+/*
 $app->post('/editProfile','editProfile');
 $app->post('/updatePassword','updatePassword');
 $app->post('/forgotPassword','forgotPassword');
-$app->get("/getMyEvents/:user_id/:event_id",'getMyEvents');
+
 $app->get("/searchEventByName/:search",'searchEventByName');
 $app->get("/searchEventByLocation/:latitude/:longitude",'searchEventByLocation');
-$app->get("/getEventFeedByEventId/:user_id/:event_id",'getEventFeedByEventId');
-$app->get("/getEventUserList/:event_id",'getEventUserList');
+
+
 $app->post("/joinThisEvent",'joinThisEvent');
 $app->post("/checkedInThisEvent",'checkedInThisEvent');
 $app->post("/postStatusOnEvent",'postStatusOnEvent');
-
+*/
 
 function getUsers()
 {
@@ -219,8 +223,91 @@ function checkUser($username)
 function getMyEvents($user_id, $event_id = "")
 {
     global $app, $db, $response;
+    
+    
+    $sql = "SELECT e.* FROM events e INNER JOIN user_events ue ON e.id=ue.event_id WHERE ue.user_id=$user_id";
+    
+    if($event_id != "")
+    {
+        $sql .= " AND e.id=$event_id";
+    }    
+    
+    try{
+        $stmt   = $db->query($sql);
+        $user_events  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = "Success";
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+
+
+    $response["body"] = $user_events;
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
 }
 
+function getEventUserList($event_id)
+{
+    global $app,$db,$response;
+    
+    $sql = "SELECT u.* FROM users u INNER JOIN user_events ue ON u.id=ue.user_id WHERE ue.event_id=$event_id";
+
+
+    try{
+        $stmt   = $db->query($sql);
+        $user_events  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = "Success";
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+
+
+    $response["body"] = $user_events;
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+    
+    
+}    
+
+function getEventFeedByEventId($user_id, $event_id)
+{
+    global $app, $db, $response;
+    
+    $sql = "SELECT * FROM event_statuses WHERE event_id=$event_id AND user_id=$user_id";
+
+
+    try{
+        $stmt   = $db->query($sql);
+        $user_feeds  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = "Success";
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+
+
+    $response["body"] = $user_feeds;
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+    
+    
+}    
+
+/*
 function searchEventByName($search)
 {
     global $app, $db, $response;
@@ -231,7 +318,7 @@ function searchEventByLocation($latitude, $longitude)
     global $app, $db, $response;
 }    
 
-
+*/
 // POST route
 $app->post(
     '/post',

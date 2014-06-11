@@ -1,6 +1,6 @@
 /*
-SQLyog Enterprise - MySQL GUI v7.14 
-MySQL - 5.5.34-0ubuntu0.12.10.1 : Database - wasl
+SQLyog Enterprise - MySQL GUI v7.02 
+MySQL - 5.6.12-log : Database - wasl
 *********************************************************************
 */
 
@@ -26,9 +26,11 @@ CREATE TABLE `event_statuses` (
   `status` text,
   `datetime` datetime DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
 
 /*Data for the table `event_statuses` */
+
+insert  into `event_statuses`(`id`,`user_id`,`event_id`,`status`,`datetime`) values (1,372,1,' asdf sda fsda fsa sfaf ',NULL);
 
 /*Table structure for table `events` */
 
@@ -43,10 +45,13 @@ CREATE TABLE `events` (
   `longitude` float(10,6) DEFAULT NULL,
   `image` varchar(255) DEFAULT NULL,
   `address` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  PRIMARY KEY (`id`),
+  FULLTEXT KEY `fulltext` (`name`,`description`)
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=latin1;
 
 /*Data for the table `events` */
+
+insert  into `events`(`id`,`name`,`description`,`datetime`,`latitude`,`longitude`,`image`,`address`) values (1,'event1','asd asd asdf asdf ads fas fdaf adsf sdaf das fasd f',NULL,10.000000,10.000000,NULL,'asd af asd fsdaf daf '),(2,'event2',' asd dsa fasd fsda fsadf asd fsda fasdf sda fas fsda ',NULL,11.000000,11.000000,NULL,'assdfa sdf sdaf ');
 
 /*Table structure for table `user_events` */
 
@@ -59,9 +64,11 @@ CREATE TABLE `user_events` (
   `datetime` datetime DEFAULT NULL,
   `is_checkedIn` tinyint(1) DEFAULT '0' COMMENT '0=not checkedIn, 1=checkedIn',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
 
 /*Data for the table `user_events` */
+
+insert  into `user_events`(`id`,`user_id`,`event_id`,`datetime`,`is_checkedIn`) values (1,372,1,NULL,1),(2,372,2,NULL,1),(3,373,1,NULL,1),(4,373,2,'2014-06-11 09:56:17',1);
 
 /*Table structure for table `users` */
 

@@ -22,21 +22,24 @@ $app->get('/users','getUsers');
 $app->get("/login/:username/:password/:type",'login');
 $app->get("/getProfile/:username",'getProfile');
 $app->post('/signup','signup');
-$app->get("/getMyEvents/:userid/:eventid",'getMyEvents');
+$app->get("/getMyEvents/:params+",'getMyEvents');
 $app->get("/getEventUserList/:eventid",'getEventUserList');
 $app->get("/getEventFeedByEventId/:userid/:eventid",'getEventFeedByEventId');
+$app->get("/searchEventByName/:search",'searchEventByName');
+$app->post("/joinThisEvent",'joinThisEvent');
+$app->post("/checkedInThisEvent",'checkedInThisEvent');
 
 /*
 $app->post('/editProfile','editProfile');
 $app->post('/updatePassword','updatePassword');
 $app->post('/forgotPassword','forgotPassword');
 
-$app->get("/searchEventByName/:search",'searchEventByName');
+
 $app->get("/searchEventByLocation/:latitude/:longitude",'searchEventByLocation');
 
 
-$app->post("/joinThisEvent",'joinThisEvent');
-$app->post("/checkedInThisEvent",'checkedInThisEvent');
+
+
 $app->post("/postStatusOnEvent",'postStatusOnEvent');
 */
 
@@ -220,12 +223,20 @@ function checkUser($username)
 }
 
 
-function getMyEvents($user_id, $event_id = "")
+function getMyEvents($params)
 {
     global $app, $db, $response;
     
+    $user_id = $params[0];
     
     $sql = "SELECT e.* FROM events e INNER JOIN user_events ue ON e.id=ue.event_id WHERE ue.user_id=$user_id";
+    
+    $event_id = "";
+    
+    if(count($params) > 1)
+    {
+        $event_id = $params[1];
+    }    
     
     if($event_id != "")
     {
@@ -307,18 +318,134 @@ function getEventFeedByEventId($user_id, $event_id)
     
 }    
 
-/*
+
 function searchEventByName($search)
 {
     global $app, $db, $response;
+    
+    $search  = $search."*";
+    
+    $sql = "SELECT * FROM events WHERE MATCH (name, description) AGAINST ('$search' IN BOOLEAN MODE)";
+
+    
+    try{
+        $stmt   = $db->query($sql);
+        $events  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = "Success";
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+
+
+    $response["body"] = $events;
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
 }
 
 function searchEventByLocation($latitude, $longitude)
 {
     global $app, $db, $response;
+    
+    
 }    
 
-*/
+function joinThisEvent()
+{
+    global $app ,$db, $response;
+    $req = $app->request();
+    $event_id = $req->params('event_id');
+    $user_id = $req->params('user_id');
+    
+    
+    $sql = "SELECT * FROM user_events WHERE user_id=$user_id AND event_id=$event_id"; 
+    
+    try{
+        $stmt   = $db->query($sql);
+        $alreadyJoined  = $stmt->fetchColumn();
+        
+        if($alreadyJoined > 0)
+        {
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = 'Already joined';
+        }
+        else
+        {
+            $sql = "INSERT INTO user_events (user_id,event_id,datetime) values (:user_id,:event_id,:datetime)";
+            $stmt = $db->prepare($sql);
+            $date = date("Y-m-d h:i:s");
+            $stmt->bindParam("user_id", $user_id);
+            $stmt->bindParam("event_id", $event_id);
+            $stmt->bindParam("datetime", $date);
+            $stmt->execute();
+            $response["header"]["error"] = 0;
+            $response["header"]["message"] = "Success";
+        }    
+        
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+    
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}    
+
+function checkedInThisEvent()
+{
+    global $app ,$db, $response;
+    $req = $app->request();
+    $event_id = $req->params('event_id');
+    $user_id = $req->params('user_id');
+
+
+    $sql = "SELECT * FROM user_events WHERE user_id=$user_id AND event_id=$event_id"; 
+
+    try{
+        $stmt   = $db->query($sql);
+        $data  = $stmt->fetch(PDO::FETCH_NAMED);
+                
+        if(is_array($data) && count($data) > 0)
+        {
+            if($data['is_checkedIn'] == 1)
+            {    
+                $response["header"]["error"] = 1;
+                $response["header"]["message"] = 'Already checked In';
+            }
+            else
+            {
+                $sql = "UPDATE user_events set is_checkedIn=1 WHERE user_id=:user_id AND event_id=:event_id";
+                $stmt = $db->prepare($sql);
+                
+                $stmt->bindParam("user_id", $user_id);
+                $stmt->bindParam("event_id", $event_id);
+                
+                $stmt->execute();
+                $response["header"]["error"] = 0;
+                $response["header"]["message"] = "Success";
+            }    
+        }
+        else
+        {
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = 'You did not join this event';
+        }    
+
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}    
+
 // POST route
 $app->post(
     '/post',

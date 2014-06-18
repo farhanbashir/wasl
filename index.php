@@ -28,10 +28,10 @@ $app->get("/getEventFeedByEventId/:userid/:eventid",'getEventFeedByEventId');
 $app->get("/searchEventByName/:search",'searchEventByName');
 $app->post("/joinThisEvent",'joinThisEvent');
 $app->post("/checkedInThisEvent",'checkedInThisEvent');
+$app->post('/updatePassword','updatePassword');
 
 /*
 $app->post('/editProfile','editProfile');
-$app->post('/updatePassword','updatePassword');
 $app->post('/forgotPassword','forgotPassword');
 
 
@@ -444,6 +444,57 @@ function checkedInThisEvent()
 
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
+}    
+
+function updatePassword()
+{
+    global $app ,$db, $response;
+    $req = $app->request();
+    $user_id = $req->params('user_id');
+    $old_password = $req->params('old_password');
+    $new_password = $req->params('new_password');
+    
+    $sql = "SELECT * FROM user_events WHERE user_id=$user_id"; 
+
+    try{
+        $stmt   = $db->query($sql);
+        $data  = $stmt->fetch(PDO::FETCH_NAMED);
+                
+        if(is_array($data) && count($data) > 0)
+        {
+            if($data['password'] != MD5($old_password))
+            {    
+                $response["header"]["error"] = 1;
+                $response["header"]["message"] = 'Password do not match';
+            }
+            else
+            {
+                $temp_password = MD5($new_password);
+                $sql = "UPDATE users set password='$new_password' WHERE user_id=:user_id";
+                $stmt = $db->prepare($sql);
+                
+                $stmt->bindParam("user_id", $user_id);
+                
+                $stmt->execute();
+                $response["header"]["error"] = 0;
+                $response["header"]["message"] = "Success";
+            }    
+        }
+        else
+        {
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = 'Some error';
+        }    
+
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+    
 }    
 
 // POST route

@@ -21,11 +21,12 @@ $response = array();
 $app->get('/users','getUsers');
 $app->get("/login/:username/:password/:type",'login');
 $app->get("/getProfile/:username",'getProfile');
-$app->post('/signup','signup');
 $app->get("/getMyEvents/:params+",'getMyEvents');
 $app->get("/getEventUserList/:eventid",'getEventUserList');
 $app->get("/getEventFeedByEventId/:userid/:eventid",'getEventFeedByEventId');
 $app->get("/searchEventByName/:search",'searchEventByName');
+
+$app->post('/signup','signup');
 $app->post("/joinThisEvent",'joinThisEvent');
 $app->post("/checkedInThisEvent",'checkedInThisEvent');
 $app->post('/updatePassword','updatePassword');
@@ -163,29 +164,40 @@ function signup() {
     $last_name = $req->params('last_name'); // Getting parameter with names
     $username = $req->params('username'); // Getting parameter with names
     $password = md5($req->params('password')); // Getting parameter with names
-    //debug(checkUser($username),1);
     
-    $sql = "INSERT INTO users (first_name,last_name,username,password) values (:first_name,:last_name,:username,:password)";
+    if(userAvailable($username))
+    {
+        $sql = "INSERT INTO users (first_name,last_name,username,password) 
+                values 
+                (:first_name,:last_name,:username,:password)";
 	
-	try{
-		$stmt = $db->prepare($sql);  
-        $stmt->bindParam("first_name", $first_name);
-		$stmt->bindParam("last_name", $last_name);
-		$stmt->bindParam("username", $username);
-		$stmt->bindParam("password", $password);
-        $stmt->execute();
-		
-		$user["user_id"] = $db->lastInsertId();
-        
-		$response["header"]["error"] = 0;
-        $response["header"]["message"] = "Success";
-		
-	}
-	catch(PDOException $e)
-	{
-		$response["header"]["error"] = 1;
-        $response["header"]["message"] = $e->getMessage();
-	}
+        try{
+            $stmt = $db->prepare($sql);  
+            $stmt->bindParam("first_name", $first_name);
+            $stmt->bindParam("last_name", $last_name);
+            $stmt->bindParam("username", $username);
+            $stmt->bindParam("password", $password);
+            $stmt->execute();
+
+            $user["user_id"] = $db->lastInsertId();
+
+            $response["header"]["error"] = 0;
+            $response["header"]["message"] = "Success";
+
+        }
+        catch(PDOException $e)
+        {
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = $e->getMessage();
+        }
+    }
+    else
+    {
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = 'User already exist';
+    }    
+    
+    
     
     $response["body"] = $user;
         
@@ -195,7 +207,7 @@ function signup() {
 }
 
 
-function checkUser($username)
+function userAvailable($username)
 {
 	global $db;
 	$sql = "SELECT * FROM users WHERE username=:username limit 1";
@@ -208,10 +220,10 @@ function checkUser($username)
 		
 		if(count($info) > 0)
 		{
-			debug(count($info));
 			return false;	
 		}
-		else {debug("true");
+		else 
+        {
 			return true;
 		}
 	}

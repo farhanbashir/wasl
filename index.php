@@ -27,6 +27,7 @@ $app->get("/getEventFeedByEventId/:userid/:eventid",'getEventFeedByEventId');
 $app->get("/searchEventByName/:search",'searchEventByName');
 
 $app->post('/signup','signup');
+$app->post("/createEvent",'createEvent');
 $app->post("/joinThisEvent",'joinThisEvent');
 $app->post("/checkedInThisEvent",'checkedInThisEvent');
 $app->post('/updatePassword','updatePassword');
@@ -258,6 +259,22 @@ function getMyEvents($params)
     try{
         $stmt   = $db->query($sql);
         $user_events  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        
+        if(count($user_events) > 0)
+        {    
+            $i = 0;
+            foreach($user_events as $event)
+            {
+                $event_users = getUsersList($event['id']);
+                if($event_users['header']['error'] == 0)
+                {
+                    $user_events[$i]['users_list'] = $event_users['header']['body'];
+                }    
+                $i++;
+                
+            }
+        }    
+            
         $response["header"]["error"] = 0;
         $response["header"]["message"] = "Success";
     }
@@ -274,30 +291,38 @@ function getMyEvents($params)
     echo json_encode($response);
 }
 
-function getEventUserList($event_id)
+function getUsersList($event_id)
 {
     global $app,$db,$response;
     
-    $sql = "SELECT u.* FROM users u INNER JOIN user_events ue ON u.id=ue.user_id WHERE ue.event_id=$event_id";
+    $sql = "SELECT u.id,u.first_name,u.last_name,u.username FROM users u INNER JOIN user_events ue ON u.id=ue.user_id WHERE ue.event_id=$event_id";
 
 
     try{
         $stmt   = $db->query($sql);
-        $user_events  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        $users_list  = $stmt->fetchAll(PDO::FETCH_NAMED);
         $response["header"]["error"] = 0;
-        $response["header"]["message"] = "Success";
+        $response["header"]["message"] = 'Success';
+        $response["header"]["body"] = $users_list;
+        
     }
     catch(PDOException $e){
         $response["header"]["error"] = 1;
         $response["header"]["message"] = $e->getMessage();
+        
     }
 
+    return $response;
+}    
 
-
-    $response["body"] = $user_events;
+function getEventUserList($event_id)
+{
+    global $app,$db,$response;
+    
+    $users_list = getUsersList($event_id);
 
     $app->response()->header("Content-Type", "application/json");
-    echo json_encode($response);
+    echo json_encode($users_list);
     
     
 }    
@@ -343,6 +368,22 @@ function searchEventByName($search)
     try{
         $stmt   = $db->query($sql);
         $events  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        
+        if(count($events) > 0)
+        {    
+            $i = 0;
+            foreach($events as $event)
+            {
+                $event_users = getUsersList($event['id']);
+                if($event_users['header']['error'] == 0)
+                {
+                    $events[$i]['users_list'] = $event_users['header']['body'];
+                }    
+                $i++;
+                
+            }
+        }
+        debug($events,1);
         $response["header"]["error"] = 0;
         $response["header"]["message"] = "Success";
     }
@@ -407,6 +448,54 @@ function joinThisEvent()
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
 }    
+
+function createEvent()
+{
+    global $app ,$db, $response;
+    $req = $app->request();
+    $name = $req->params('name');
+    $description = $req->params('description');
+    $address = $req->params('address');
+    $start_date = $req->params('start_date');
+    $end_date = $req->params('end_date');
+    
+    
+    $sql = "SELECT * FROM events WHERE name='$name'"; 
+    
+    try{
+        $stmt   = $db->query($sql);
+        $alreadyJoined  = $stmt->fetchColumn();
+        
+        if($alreadyJoined > 0)
+        {
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = 'Already exist';
+        }
+        else
+        {
+            $sql = "INSERT INTO events (name,description,address,start_date,end_date) values (:name,:description,:address,:start_date,:end_date)";
+            $stmt = $db->prepare($sql);
+            //$date = date("Y-m-d h:i:s");
+            $stmt->bindParam("name", $name);
+            $stmt->bindParam("description", $description);
+            $stmt->bindParam("address", $address);
+            $stmt->bindParam("start_date", $start_date);
+            $stmt->bindParam("end_date", $end_date);
+            $stmt->execute();
+            $response["header"]["error"] = 0;
+            $response["header"]["message"] = "Success";
+        }    
+        
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+    
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}    
+
 
 function checkedInThisEvent()
 {

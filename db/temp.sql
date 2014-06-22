@@ -1,6 +1,6 @@
 /*
-SQLyog Enterprise - MySQL GUI v7.02 
-MySQL - 5.6.12-log : Database - wasl
+SQLyog Enterprise - MySQL GUI v7.14 
+MySQL - 5.5.34-0ubuntu0.12.10.1 : Database - wasl
 *********************************************************************
 */
 
@@ -40,18 +40,20 @@ CREATE TABLE `events` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
   `description` text,
-  `datetime` datetime DEFAULT NULL,
+  `start_date` datetime DEFAULT NULL,
+  `end_date` datetime DEFAULT NULL,
   `latitude` float(10,6) DEFAULT NULL,
   `longitude` float(10,6) DEFAULT NULL,
   `image` varchar(255) DEFAULT NULL,
   `address` varchar(255) DEFAULT NULL,
+  `user_id` int(11) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   FULLTEXT KEY `fulltext` (`name`,`description`)
 ) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=latin1;
 
 /*Data for the table `events` */
 
-insert  into `events`(`id`,`name`,`description`,`datetime`,`latitude`,`longitude`,`image`,`address`) values (1,'event1','asd asd asdf asdf ads fas fdaf adsf sdaf das fasd f',NULL,10.000000,10.000000,NULL,'asd af asd fsdaf daf '),(2,'event2',' asd dsa fasd fsda fsadf asd fsda fasdf sda fas fsda ',NULL,11.000000,11.000000,NULL,'assdfa sdf sdaf ');
+insert  into `events`(`id`,`name`,`description`,`start_date`,`end_date`,`latitude`,`longitude`,`image`,`address`,`user_id`) values (1,'event1','asd asd asdf asdf ads fas fdaf adsf sdaf das fasd f',NULL,NULL,10.000000,10.000000,NULL,'asd af asd fsdaf daf ',NULL),(2,'event2',' asd dsa fasd fsda fsadf asd fsda fasdf sda fas fsda ',NULL,NULL,11.000000,11.000000,NULL,'assdfa sdf sdaf ',NULL);
 
 /*Table structure for table `user_events` */
 

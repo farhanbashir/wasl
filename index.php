@@ -31,6 +31,7 @@ $app->post("/createEvent",'createEvent');
 $app->post("/joinThisEvent",'joinThisEvent');
 $app->post("/checkedInThisEvent",'checkedInThisEvent');
 $app->post('/updatePassword','updatePassword');
+$app->post('/imgSave','imgSave');
 
 /*
 $app->post('/editProfile','editProfile');
@@ -235,6 +236,31 @@ function userAvailable($username)
 	}
 }
 
+function imgSave()
+{
+    global $db, $app, $response;
+    
+    if(!isset($_FILES['file']))
+    {
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+    else
+    {
+        $uploaddir = 'images/';
+        $file = basename($_FILES['file']['name']);
+        $uploadfile = $uploaddir . $file;
+
+        if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
+            $response["header"]["error"] = 0;
+            $response["header"]["message"] = $uploadfile;
+        } else {
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = 'Some error';
+        }
+    }    
+    
+}    
 
 function getMyEvents($params)
 {
@@ -458,6 +484,7 @@ function createEvent()
     $address = $req->params('address');
     $start_date = $req->params('start_date');
     $end_date = $req->params('end_date');
+    $image = $req->params('image');
     
     
     $sql = "SELECT * FROM events WHERE name='$name'"; 
@@ -473,14 +500,15 @@ function createEvent()
         }
         else
         {
-            $sql = "INSERT INTO events (name,description,address,start_date,end_date) values (:name,:description,:address,:start_date,:end_date)";
+            $sql = "INSERT INTO events (name,description,address,start_date,end_date,image) values (:name,:description,:address,:start_date,:end_date,:image)";
             $stmt = $db->prepare($sql);
-            //$date = date("Y-m-d h:i:s");
+            $created_date = date("Y-m-d h:i:s");
             $stmt->bindParam("name", $name);
             $stmt->bindParam("description", $description);
             $stmt->bindParam("address", $address);
             $stmt->bindParam("start_date", $start_date);
             $stmt->bindParam("end_date", $end_date);
+            $stmt->bindParam("created_date", $created_date);
             $stmt->execute();
             $response["header"]["error"] = 0;
             $response["header"]["message"] = "Success";

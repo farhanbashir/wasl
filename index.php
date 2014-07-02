@@ -513,6 +513,9 @@ function createEvent()
     $address = $req->params('address');
     $start_date = $req->params('start_date');
     $end_date = $req->params('end_date');
+    $latitude = $req->params('latitude');
+    $longitude = $req->params('longitude');
+    $user_id = $req->params('user_id');
     $image = '';
     
     if(isset($_FILES['file']))
@@ -544,7 +547,7 @@ function createEvent()
             }
             else
             {
-                $sql = "INSERT INTO events (name,description,address,start_date,end_date,image,created_date) values (:name,:description,:address,:start_date,:end_date,:image,:created_date)";
+                $sql = "INSERT INTO events (name,description,address,start_date,end_date,image,created_date) values (:name,:description,:address,:start_date,:end_date,:image,:created_date,:latitude,:longitude)";
                 $stmt = $db->prepare($sql);
                 
                 $created_date = date("Y-m-d h:i:s");
@@ -556,6 +559,9 @@ function createEvent()
                 $stmt->bindParam("end_date", $end_date);
                 $stmt->bindParam("created_date", $created_date);
                 $stmt->bindParam("image", $image);
+                $stmt->bindParam("latitude", $latitude);
+                $stmt->bindParam("longitude", $longitude);
+                $stmt->bindParam("user_id", $user_id);
                 $stmt->execute();
                 $response["header"]["error"] = 0;
                 $response["header"]["message"] = "Success";

@@ -484,41 +484,60 @@ function createEvent()
     $address = $req->params('address');
     $start_date = $req->params('start_date');
     $end_date = $req->params('end_date');
-    $image = $req->params('image');
+    $image = '';
     
-    
-    $sql = "SELECT * FROM events WHERE name='$name'"; 
-    
-    try{
-        $stmt   = $db->query($sql);
-        $alreadyJoined  = $stmt->fetchColumn();
-        
-        if($alreadyJoined > 0)
-        {
+    if(isset($_FILES['file']))
+    {
+        $uploaddir = 'images/';
+        $file = basename($_FILES['file']['name']);
+        $uploadfile = $uploaddir . $file;
+
+        if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
+            $image = $uploadfile;
+            
+        } else {
             $response["header"]["error"] = 1;
-            $response["header"]["message"] = 'Already exist';
+            $response["header"]["message"] = 'Some error';
         }
-        else
-        {
-            $sql = "INSERT INTO events (name,description,address,start_date,end_date,image) values (:name,:description,:address,:start_date,:end_date,:image)";
-            $stmt = $db->prepare($sql);
-            $created_date = date("Y-m-d h:i:s");
-            $stmt->bindParam("name", $name);
-            $stmt->bindParam("description", $description);
-            $stmt->bindParam("address", $address);
-            $stmt->bindParam("start_date", $start_date);
-            $stmt->bindParam("end_date", $end_date);
-            $stmt->bindParam("created_date", $created_date);
-            $stmt->execute();
-            $response["header"]["error"] = 0;
-            $response["header"]["message"] = "Success";
-        }    
-        
-    }
-    catch(PDOException $e){
-        $response["header"]["error"] = 1;
-        $response["header"]["message"] = $e->getMessage();
-    }
+    }    
+    
+    if(count($response) == 0)
+    {
+        try{
+            $sql = "SELECT * FROM events WHERE name='$name'"; 
+            $stmt   = $db->query($sql);
+            $alreadyExist  = $stmt->fetchColumn();
+
+            if($alreadyExist > 0)
+            {
+                $response["header"]["error"] = 1;
+                $response["header"]["message"] = 'Already exist';
+            }
+            else
+            {
+                $sql = "INSERT INTO events (name,description,address,start_date,end_date,image,created_date) values (:name,:description,:address,:start_date,:end_date,:image,:created_date)";
+                $stmt = $db->prepare($sql);
+                
+                $created_date = date("Y-m-d h:i:s");
+                
+                $stmt->bindParam("name", $name);
+                $stmt->bindParam("description", $description);
+                $stmt->bindParam("address", $address);
+                $stmt->bindParam("start_date", $start_date);
+                $stmt->bindParam("end_date", $end_date);
+                $stmt->bindParam("created_date", $created_date);
+                $stmt->bindParam("image", $image);
+                $stmt->execute();
+                $response["header"]["error"] = 0;
+                $response["header"]["message"] = "Success";
+            }    
+
+        }
+        catch(PDOException $e){
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = $e->getMessage();
+        }
+    }    
     
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);

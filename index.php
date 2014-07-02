@@ -79,7 +79,7 @@ function getProfile($username){
 	global $app,$db;
     $info = array();
     
-    $sql = "SELECT * FROM users where username=:username ";
+    $sql = "SELECT (select count(*) from user_events where user_id=u.id and is_checkedIn=1) as checkins,u.* FROM users u where u.username=:username ";
     try{
         $stmt = $db->prepare($sql);  
         $stmt->bindParam("username", $username);
@@ -166,32 +166,64 @@ function signup() {
     $last_name = $req->params('last_name'); // Getting parameter with names
     $username = $req->params('username'); // Getting parameter with names
     $password = md5($req->params('password')); // Getting parameter with names
+    $company_email= $req->params('company_email');
+    $company_name= $req->params('company_name');
+    $dob= $req->params('dob');
+    $designation= $req->params('designation');
+    $phone= $req->params('phone');
+    $office_no= $req->params('office_no');
+    $user_image = '';
     
     if(userAvailable($username))
     {
-        $sql = "INSERT INTO users (first_name,last_name,username,password) 
+        $sql = "INSERT INTO users (first_name,last_name,username,password,company_email,dob,designation,phone,office_no,company_name,user_image) 
                 values 
-                (:first_name,:last_name,:username,:password)";
+                (:first_name,:last_name,:username,:password,:company_email,:dob,:designation,:phone,:office_no,:company_name,:user_image)";
 	
-        try{
-            $stmt = $db->prepare($sql);  
-            $stmt->bindParam("first_name", $first_name);
-            $stmt->bindParam("last_name", $last_name);
-            $stmt->bindParam("username", $username);
-            $stmt->bindParam("password", $password);
-            $stmt->execute();
-
-            $user["user_id"] = $db->lastInsertId();
-
-            $response["header"]["error"] = 0;
-            $response["header"]["message"] = "Success";
-
-        }
-        catch(PDOException $e)
+        if(isset($_FILES['file']))
         {
-            $response["header"]["error"] = 1;
-            $response["header"]["message"] = $e->getMessage();
+            $uploaddir = 'images/';
+            $file = basename($_FILES['file']['name']);
+            $uploadfile = $uploaddir . $file;
+
+            if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
+                $user_image = $uploadfile;
+
+            } else {
+                $response["header"]["error"] = 1;
+                $response["header"]["message"] = 'Some error';
+            }
         }
+        
+        if(count($response) == 0)
+        {
+            try{
+                $stmt = $db->prepare($sql);  
+                $stmt->bindParam("first_name", $first_name);
+                $stmt->bindParam("last_name", $last_name);
+                $stmt->bindParam("username", $username);
+                $stmt->bindParam("password", $password);
+                $stmt->bindParam("company_email", $company_email);
+                $stmt->bindParam("dob", $dob);
+                $stmt->bindParam("designation", $designation);
+                $stmt->bindParam("phone", $phone);
+                $stmt->bindParam("office_no", $office_no);
+                $stmt->bindParam("company_name", $company_name);
+                $stmt->bindParam("user_image", $user_image);
+                $stmt->execute();
+
+                $user["user_id"] = $db->lastInsertId();
+                $response["body"] = $user;
+                $response["header"]["error"] = 0;
+                $response["header"]["message"] = "Success";
+
+            }
+            catch(PDOException $e)
+            {
+                $response["header"]["error"] = 1;
+                $response["header"]["message"] = $e->getMessage();
+            }
+        }    
     }
     else
     {
@@ -199,9 +231,6 @@ function signup() {
         $response["header"]["message"] = 'User already exist';
     }    
     
-    
-    
-    $response["body"] = $user;
         
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
@@ -321,7 +350,7 @@ function getUsersList($event_id)
 {
     global $app,$db,$response;
     
-    $sql = "SELECT u.id,u.first_name,u.last_name,u.username FROM users u INNER JOIN user_events ue ON u.id=ue.user_id WHERE ue.event_id=$event_id";
+    $sql = "SELECT u.id,u.first_name,u.last_name,u.username,ue.is_checkedIn FROM users u INNER JOIN user_events ue ON u.id=ue.user_id WHERE ue.event_id=$event_id";
 
 
     try{

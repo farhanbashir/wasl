@@ -176,9 +176,9 @@ function signup() {
     
     if(userAvailable($username))
     {
-        $sql = "INSERT INTO users (first_name,last_name,username,password,company_email,dob,designation,phone,office_no,company_name,user_image) 
+        $sql = "INSERT INTO users (first_name,last_name,username,password,company_email,date_of_birth,designation,phone,office_no,company_name,user_image) 
                 values 
-                (:first_name,:last_name,:username,:password,:company_email,:dob,:designation,:phone,:office_no,:company_name,:user_image)";
+                (:first_name,:last_name,:username,:password,:company_email,:date_of_birth,:designation,:phone,:office_no,:company_name,:user_image)";
 	
         if(isset($_FILES['file']))
         {
@@ -204,7 +204,7 @@ function signup() {
                 $stmt->bindParam("username", $username);
                 $stmt->bindParam("password", $password);
                 $stmt->bindParam("company_email", $company_email);
-                $stmt->bindParam("dob", $dob);
+                $stmt->bindParam("date_of_birth", $dob);
                 $stmt->bindParam("designation", $designation);
                 $stmt->bindParam("phone", $phone);
                 $stmt->bindParam("office_no", $office_no);
@@ -248,8 +248,8 @@ function userAvailable($username)
         $stmt->bindParam("username", $username);
 		$result = $stmt->execute();
 		$info  = $stmt->fetch(PDO::FETCH_NAMED);
-		
-		if(count($info) > 0)
+	   
+		if($stmt->rowCount() > 0)
 		{
 			return false;	
 		}

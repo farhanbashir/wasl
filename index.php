@@ -23,7 +23,7 @@ $app->get("/login/:username/:password/:type",'login');
 $app->get("/getProfile/:username",'getProfile');
 $app->get("/getMyEvents/:params+",'getMyEvents');
 $app->get("/getEventUserList/:eventid",'getEventUserList');
-$app->get("/getEventFeedByEventId/:userid/:eventid",'getEventFeedByEventId');
+$app->get("/getEventFeedByEventId/:eventid",'getEventFeedByEventId');
 $app->get("/searchEventByName/:search",'searchEventByName');
 
 $app->post('/signup','signup');
@@ -382,11 +382,14 @@ function getEventUserList($event_id)
     
 }    
 
-function getEventFeedByEventId($user_id, $event_id)
+function getEventFeedByEventId( $event_id)
 {
     global $app, $db, $response;
     
-    $sql = "SELECT * FROM event_statuses WHERE event_id=$event_id AND user_id=$user_id";
+//    $sql = "SELECT * FROM event_statuses WHERE event_id=$event_id";// AND user_id=$user_id
+    $sql = "SELECT es.*,u.user_image,u.username FROM event_statuses es
+                inner join users u on u.id=es.user_id
+                 WHERE es.event_id=$event_id";
 
 
     try{

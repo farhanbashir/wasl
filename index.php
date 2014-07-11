@@ -24,6 +24,8 @@ $app->get("/getProfile/:username",'getProfile');
 $app->get("/getMyEvents/:params+",'getMyEvents');
 $app->get("/getEventUserList/:eventid",'getEventUserList');
 $app->get("/getEventFeedByEventId/:eventid",'getEventFeedByEventId');
+$app->get("/getFollower/:user_id",'getFollower');
+$app->get("/getFollowing/:user_id",'getFollowing');
 $app->get("/searchEventByName/:search",'searchEventByName');
 
 $app->post('/signup','signup');
@@ -31,6 +33,8 @@ $app->post("/createEvent",'createEvent');
 $app->post("/joinThisEvent",'joinThisEvent');
 $app->post("/checkedInThisEvent",'checkedInThisEvent');
 $app->post('/updatePassword','updatePassword');
+$app->post('/shareStatus','shareStatus');
+$app->post('/followUser','followUser');
 $app->post('/imgSave','imgSave');
 
 /*
@@ -79,7 +83,12 @@ function getProfile($username){
 	global $app,$db;
     $info = array();
     
-    $sql = "SELECT (select count(*) from user_events where user_id=u.id and is_checkedIn=1) as checkins,u.* FROM users u where u.username=:username ";
+//    $sql = "SELECT (select count(*) from user_events where user_id=u.id and is_checkedIn=1) as checkins,u.* FROM users u where u.username=:username ";
+    $sql = "SELECT 
+            (select count(*) from user_events where user_id=u.id and is_checkedIn=1) as checkins,
+            (select count(*) from followers where user_id=u.id) as follower,
+            (select count(*) from followers where follower_id=u.id) as following,
+            u.* FROM users u where u.username=:username";
     try{
         $stmt = $db->prepare($sql);  
         $stmt->bindParam("username", $username);
@@ -87,8 +96,17 @@ function getProfile($username){
         //$stmt   = $db->query($sql);
         $info  = $stmt->fetch(PDO::FETCH_NAMED);
         
-        $response["header"]["error"] = 0;
-        $response["header"]["message"] = "Success";
+        if(is_array($info))
+        {
+            $response["header"]["error"] = 0;
+            $response["header"]["message"] = "Success";
+            $response["body"] = $info;    
+        }    
+        else
+        {
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = "User not exist";
+        }    
         
     }
     catch(PDOException $e){
@@ -96,7 +114,7 @@ function getProfile($username){
         $response["header"]["message"] = $e->getMessage();
     }    
     
-    $response["body"] = $info;
+    
         
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
@@ -367,8 +385,67 @@ function getUsersList($event_id)
         
     }
 
-    return $response;
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
 }    
+
+function getFollower($user_id)
+{
+    global $app,$db,$response;
+    
+    $sql = "select u.* from followers f
+            inner join users u on u.id=f.follower_id
+            where user_id=$user_id";
+
+
+    try{
+        $stmt   = $db->query($sql);
+        $users_list  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = 'Success';
+        $response["header"]["body"] = $users_list;
+        
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+        
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}    
+
+function getFollowing($user_id)
+{
+    global $app,$db,$response;
+    
+    $sql = "select u.* from followers f
+            inner join users u on u.id=f.user_id
+            where follower_id=$user_id";
+
+
+    try{
+        $stmt   = $db->query($sql);
+        $users_list  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = 'Success';
+        $response["header"]["body"] = $users_list;
+        
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+        
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}    
+
+
 
 function getEventUserList($event_id)
 {
@@ -387,8 +464,9 @@ function getEventFeedByEventId( $event_id)
     global $app, $db, $response;
     
 //    $sql = "SELECT * FROM event_statuses WHERE event_id=$event_id";// AND user_id=$user_id
-    $sql = "SELECT es.*,u.user_image,u.username FROM event_statuses es
-                inner join users u on u.id=es.user_id
+    $sql = "SELECT e.name, es.*,u.user_image,u.username,u.first_name, u.last_name FROM event_statuses es
+                inner join users u on u.id=es.user_id 
+                inner join events e on es.event_id=e.id 
                  WHERE es.event_id=$event_id";
 
 
@@ -441,7 +519,7 @@ function searchEventByName($search)
                 
             }
         }
-        debug($events,1);
+        
         $response["header"]["error"] = 0;
         $response["header"]["message"] = "Success";
     }
@@ -581,6 +659,37 @@ function createEvent()
     echo json_encode($response);
 }    
 
+function shareStatus()
+{
+    global $app ,$db, $response;
+    $req = $app->request();
+    $event_id = $req->params('event_id');
+    $user_id = $req->params('user_id');
+    $status = $req->params('status');
+    
+    
+    try{
+        $sql = "INSERT INTO event_statuses (user_id,event_id,status,datetime) values (:user_id,:event_id,:status,:datetime)";
+            $stmt = $db->prepare($sql);
+            $date = date("Y-m-d h:i:s");
+            $stmt->bindParam("user_id", $user_id);
+            $stmt->bindParam("event_id", $event_id);
+            $stmt->bindParam("status", $status);
+            $stmt->bindParam("datetime", $date);
+            $stmt->execute();
+            $response["header"]["error"] = 0;
+            $response["header"]["message"] = "Success";    
+        
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+    
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}    
+
 
 function checkedInThisEvent()
 {
@@ -620,6 +729,48 @@ function checkedInThisEvent()
         {
             $response["header"]["error"] = 1;
             $response["header"]["message"] = 'You did not join this event';
+        }    
+
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}    
+
+function followUser()
+{
+    global $app ,$db, $response;
+    $req = $app->request();
+    $follower_id = $req->params('follower_id');
+    $user_id = $req->params('user_id');
+
+
+    $sql = "SELECT * FROM followers WHERE user_id=$user_id AND follower_id=$follower_id"; 
+
+    try{
+        $stmt   = $db->query($sql);
+        $data  = $stmt->fetchColumn();
+        
+        if($data == false)
+        {
+            $sql = "INSERT INTO followers (user_id,follower_id,datetime) values (:user_id,:follower_id,:datetime)";
+            $stmt = $db->prepare($sql);
+            $date = date("Y-m-d h:i:s");
+            $stmt->bindParam("user_id", $user_id);
+            $stmt->bindParam("follower_id", $follower_id);
+            $stmt->bindParam("datetime", $date);
+            $stmt->execute();
+            $response["header"]["error"] = 0;
+            $response["header"]["message"] = "Success";        
+        }
+        else
+        {
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = 'Already following';
         }    
 
     }

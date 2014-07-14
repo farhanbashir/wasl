@@ -721,7 +721,7 @@ function searchEventByLocation($latitude,$longitude)
              + SIN( RADIANS($latitude) ) * SIN( RADIANS( latitude ) ) )
               ) AS distance
             FROM `events` 
-            HAVING distance > 1 
+            HAVING distance < 1 
             ORDER BY distance";
 
     

@@ -35,6 +35,7 @@ $app->post("/checkedInThisEvent",'checkedInThisEvent');
 $app->post('/updatePassword','updatePassword');
 $app->post('/shareStatus','shareStatus');
 $app->post('/followUser','followUser');
+$app->post('/sendMessage','sendMessage');
 $app->post('/imgSave','imgSave');
 
 /*
@@ -125,7 +126,6 @@ function login($username,$password, $type){
     global $app, $db, $response;	
     $data = array();
     
-
     //$sql = "SELECT * FROM users where username=:username ";
     $sql = "SELECT 
             (select count(*) from user_events where user_id=u.id and is_checkedIn=1) as checkins,
@@ -209,11 +209,13 @@ function signup() {
         {
             $uploaddir = 'images/';
             $file = basename($_FILES['file']['name']);
+            
             $uploadfile = $uploaddir . $file;
-
+            
             if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
                 $user_image = $uploadfile;
-
+                $path = substr($_SERVER['REQUEST_URI'],0,stripos($_SERVER['REQUEST_URI'], "index.php"));
+                $user_image = $_SERVER['SERVER_NAME'].$path.$user_image;    
             } else {
                 $response["header"]["error"] = 1;
                 $response["header"]["message"] = 'Some error';
@@ -645,7 +647,8 @@ function createEvent()
 
         if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
             $image = $uploadfile;
-            
+            $path = substr($_SERVER['REQUEST_URI'],0,stripos($_SERVER['REQUEST_URI'], "index.php"));
+            $user_image = $_SERVER['SERVER_NAME'].$path.$user_image;    
         } else {
             $response["header"]["error"] = 1;
             $response["header"]["message"] = 'Some error';
@@ -812,10 +815,10 @@ function followUser()
             $sql = "INSERT INTO followers (user_id,follower_id,datetime,event_id) values (:user_id,:follower_id,:datetime,:event_id)";
             $stmt = $db->prepare($sql);
             $date = date("Y-m-d h:i:s");
-            $stmt->bindParam("user_id", $user_id);
-            $stmt->bindParam("follower_id", $follower_id);
-            $stmt->bindParam("datetime", $date);
-            $stmt->bindParam("event_id", $event_id);
+            $stmt->bindParam(":user_id", $user_id);
+            $stmt->bindParam(":follower_id", $follower_id);
+            $stmt->bindParam(":datetime", $date);
+            $stmt->bindParam(":event_id", $event_id);
             $stmt->execute();
             $response["header"]["error"] = 0;
             $response["header"]["message"] = "Success";        
@@ -825,6 +828,39 @@ function followUser()
             $response["header"]["error"] = 1;
             $response["header"]["message"] = 'Already following';
         }    
+
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}    
+
+function sendMessage()
+{
+    global $app ,$db, $response;
+    $req = $app->request();
+    $message = $req->params('message');
+    $from = $req->params('from');
+    $to = $req->params('to');
+
+
+    try{
+        
+        $sql = "INSERT INTO messages (message,`from`,`to`,`datetime`) values (:message,:from,:to,:datetime)";
+        $stmt = $db->prepare($sql);
+        $date = date("Y-m-d h:i:s");
+        $stmt->bindParam(":message", $message);
+        $stmt->bindParam(":from", $from);
+        $stmt->bindParam(":to", $to);
+        $stmt->bindParam(":datetime", $date);
+        $stmt->execute();
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = "Success";        
+            
 
     }
     catch(PDOException $e){

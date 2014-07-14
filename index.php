@@ -25,8 +25,11 @@ $app->get("/getMyEvents/:params+",'getMyEvents');
 $app->get("/getEventUserList/:eventid",'getEventUserList');
 $app->get("/getEventFeedByEventId/:eventid",'getEventFeedByEventId');
 $app->get("/getFollower/:user_id",'getFollower');
+$app->get("/getMessages/:user_id",'getMessages');
 $app->get("/getFollowing/:user_id",'getFollowing');
 $app->get("/searchEventByName/:search",'searchEventByName');
+$app->get("/searchEventByLocation/:latitude/:longitude",'searchEventByLocation');
+
 
 $app->post('/signup','signup');
 $app->post("/createEvent",'createEvent');
@@ -37,13 +40,14 @@ $app->post('/shareStatus','shareStatus');
 $app->post('/followUser','followUser');
 $app->post('/sendMessage','sendMessage');
 $app->post('/imgSave','imgSave');
+$app->post('/editProfile','editProfile');
 
 /*
-$app->post('/editProfile','editProfile');
+
 $app->post('/forgotPassword','forgotPassword');
 
 
-$app->get("/searchEventByLocation/:latitude/:longitude",'searchEventByLocation');
+
 
 
 
@@ -226,17 +230,17 @@ function signup() {
         {
             try{
                 $stmt = $db->prepare($sql);  
-                $stmt->bindParam("first_name", $first_name);
-                $stmt->bindParam("last_name", $last_name);
-                $stmt->bindParam("username", $username);
-                $stmt->bindParam("password", $password);
-                $stmt->bindParam("company_email", $company_email);
-                $stmt->bindParam("date_of_birth", $dob);
-                $stmt->bindParam("designation", $designation);
-                $stmt->bindParam("phone", $phone);
-                $stmt->bindParam("office_no", $office_no);
-                $stmt->bindParam("company_name", $company_name);
-                $stmt->bindParam("user_image", $user_image);
+                $stmt->bindParam(":first_name", $first_name);
+                $stmt->bindParam(":last_name", $last_name);
+                $stmt->bindParam(":username", $username);
+                $stmt->bindParam(":password", $password);
+                $stmt->bindParam(":company_email", $company_email);
+                $stmt->bindParam(":date_of_birth", $dob);
+                $stmt->bindParam(":designation", $designation);
+                $stmt->bindParam(":phone", $phone);
+                $stmt->bindParam(":office_no", $office_no);
+                $stmt->bindParam(":company_name", $company_name);
+                $stmt->bindParam(":user_image", $user_image);
                 $stmt->execute();
 
                 $user["user_id"] = $db->lastInsertId();
@@ -264,6 +268,105 @@ function signup() {
 	
 }
 
+function editProfile() {
+	global $app, $db, $response;
+	
+	$req = $app->request(); // Getting parameter with names
+    $first_name = $req->params('first_name'); // Getting parameter with names
+    $last_name = $req->params('last_name'); // Getting parameter with names
+    $company_email= $req->params('company_email');
+    $username= $req->params('username');
+    $company_name= $req->params('company_name');
+    $dob= $req->params('dob');
+    $designation= $req->params('designation');
+    $phone= $req->params('phone');
+    $office_no= $req->params('office_no');
+    $user_id = $req->params('user_id');
+    $user_image = '';
+    
+    if(!userAvailable($username))
+    {
+        $sql = "UPDATE users SET 
+                first_name=:first_name,
+                last_name=:last_name,
+                company_email=:company_email,
+                date_of_birth=:date_of_birth,
+                designation=:designation,
+                phone=:phone,
+                office_no=:office_no,
+                company_email=:company_email,
+                user_image=:user_image,
+                modified=:modified
+                WHERE id=:user_id";
+       
+        if(isset($_FILES['file']))
+        {
+            $uploaddir = 'images/';
+            $file = basename($_FILES['file']['name']);
+            
+            $uploadfile = $uploaddir . $file;
+            
+            if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
+                $user_image = $uploadfile;
+                $path = substr($_SERVER['REQUEST_URI'],0,stripos($_SERVER['REQUEST_URI'], "index.php"));
+                $user_image = $_SERVER['SERVER_NAME'].$path.$user_image;    
+            } else {
+                $response["header"]["error"] = 1;
+                $response["header"]["message"] = 'Some error';
+            }
+        }
+        
+        if(count($response) == 0)
+        {
+            try{
+                $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $stmt = $db->prepare($sql);  
+                $datetime = date("Y-m-d h:i:s");
+                $stmt->bindParam(":first_name", $first_name);
+                $stmt->bindParam(":last_name", $last_name);
+                $stmt->bindParam(":company_email", $company_email);
+                $stmt->bindParam(":date_of_birth", $dob);
+                $stmt->bindParam(":designation", $designation);
+                $stmt->bindParam(":phone", $phone);
+                $stmt->bindParam(":office_no", $office_no);
+                $stmt->bindParam(":company_name", $company_name);
+                $stmt->bindParam(":user_image", $user_image);
+                $stmt->bindParam(":user_id",$user_id);
+                $stmt->bindParam(":modified",$datetime);
+                $stmt->execute();
+                
+                $response["header"]["error"] = 0;
+                $response["header"]["message"] = "Success";
+
+            }
+            catch(PDOException $e)
+            {
+                $response["header"]["error"] = 1;
+                $response["header"]["message"] = $e->getMessage();
+            }
+        }    
+    }
+    else
+    {
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = 'User not exist';
+    }    
+    
+        
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+	
+}
+
+function parms($string,$data) {
+    $indexed=$data==array_values($data);
+    foreach($data as $k=>$v) {
+        if(is_string($v)) $v="'$v'";
+        if($indexed) $string=preg_replace('/\?/',$v,$string,1);
+        else $string=str_replace(":$k",$v,$string);
+    }
+    return $string;
+}
 
 function userAvailable($username)
 {
@@ -456,7 +559,35 @@ function getFollower($user_id)
 
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
-}    
+}
+
+function getMessages($user_id)
+{
+    global $app,$db,$response;
+    
+    $sql = "select m.*,u.first_name,u.last_name,u.username,u.designation from messages m 
+            inner join users u on u.id=m.from 
+            where m.to=$user_id";
+
+
+    try{
+        $stmt   = $db->query($sql);
+        $messages  = $stmt->fetchAll(PDO::FETCH_NAMED);
+       
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = 'Success';
+        $response["header"]["body"] = $messages;
+        
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+        
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}
 
 function getFollowing($user_id)
 {
@@ -576,12 +707,60 @@ function searchEventByName($search)
     echo json_encode($response);
 }
 
-function searchEventByLocation($latitude, $longitude)
+function searchEventByLocation($latitude,$longitude)
 {
     global $app, $db, $response;
     
     
-}    
+    $sql = "SELECT *,
+            ( 6371 * 
+            ACOS( 
+             COS( RADIANS($latitude) )
+             * COS( RADIANS( latitude ) ) 
+             * COS( RADIANS( longitude ) - RADIANS($longitude) ) 
+             + SIN( RADIANS($latitude) ) * SIN( RADIANS( latitude ) ) )
+              ) AS distance
+            FROM `events` 
+            HAVING distance > 1 
+            ORDER BY distance";
+
+    
+    try{
+        $stmt   = $db->query($sql);
+        $events  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        
+        if(count($events) > 0)
+        {    
+            $i = 0;
+            foreach($events as $event)
+            {
+                $event_users = getUserListArray($event['id']);
+                if(count($event_users) == 0)
+                {
+                    $events[$i]['users_list'] = $event_users;
+                }    
+                $i++;
+                
+            }
+        }
+        
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = "Success";
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+
+
+    $response["body"] = $events;
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}
+
+
 
 function joinThisEvent()
 {

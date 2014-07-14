@@ -50,11 +50,11 @@ CREATE TABLE `events` (
   `created_date` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   FULLTEXT KEY `fulltext` (`name`,`description`)
-) ENGINE=MyISAM AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;
 
 /*Data for the table `events` */
 
-insert  into `events`(`id`,`name`,`description`,`start_date`,`end_date`,`latitude`,`longitude`,`image`,`address`,`user_id`,`created_date`) values (1,'event1','asd asd asdf asdf ads fas fdaf adsf sdaf das fasd f',NULL,NULL,10.000000,10.000000,NULL,'asd af asd fsdaf daf ',NULL,NULL),(2,'event2',' asd dsa fasd fsda fsadf asd fsda fasdf sda fas fsda ',NULL,NULL,11.000000,11.000000,NULL,'assdfa sdf sdaf ',NULL,NULL),(3,'test','asdf sad fas fsa dafs dsaf ','2014-07-01 09:07:57','2014-07-01 09:07:57',NULL,NULL,NULL,'lalukhet',NULL,'2014-07-01 09:12:01'),(4,'farhan event','hello how are you','2014-07-01 09:07:57','2014-07-01 09:07:57',NULL,NULL,'images/aosm.jpg','15/11 b area liaquatabad',NULL,'2014-07-03 12:09:55');
+insert  into `events`(`id`,`name`,`description`,`start_date`,`end_date`,`latitude`,`longitude`,`image`,`address`,`user_id`,`created_date`) values (1,'event1','asd asd asdf asdf ads fas fdaf adsf sdaf das fasd f',NULL,NULL,10.000000,10.000000,NULL,'asd af asd fsdaf daf ',NULL,NULL),(2,'event2',' asd dsa fasd fsda fsadf asd fsda fasdf sda fas fsda ',NULL,NULL,11.000000,11.000000,NULL,'assdfa sdf sdaf ',NULL,NULL),(3,'test','asdf sad fas fsa dafs dsaf ','2014-07-01 09:07:57','2014-07-01 09:07:57',NULL,NULL,NULL,'lalukhet',NULL,'2014-07-01 09:12:01'),(4,'farhan event','hello how are you','2014-07-01 09:07:57','2014-07-01 09:07:57',NULL,NULL,'images/aosm.jpg','15/11 b area liaquatabad',NULL,'2014-07-03 12:09:55'),(5,'ooe','dsfad','2014-07-14 05:19:14','2014-07-14 05:19:14',29.878937,29.878937,'','sdf',372,'2014-07-14 05:19:14'),(6,'ooee','dsfad','2014-07-14 05:19:44','2014-07-14 05:19:44',29.878937,29.878937,'','sdf',372,'2014-07-14 05:19:44');
 
 /*Table structure for table `followers` */
 
@@ -65,12 +65,30 @@ CREATE TABLE `followers` (
   `follower_id` int(11) unsigned NOT NULL,
   `user_id` int(11) unsigned NOT NULL,
   `datetime` datetime DEFAULT NULL,
+  `event_id` int(11) unsigned NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1;
 
 /*Data for the table `followers` */
 
-insert  into `followers`(`id`,`follower_id`,`user_id`,`datetime`) values (1,372,373,'2014-07-12 02:07:06'),(2,374,373,NULL);
+insert  into `followers`(`id`,`follower_id`,`user_id`,`datetime`,`event_id`) values (1,372,373,'2014-07-12 02:07:06',0),(2,374,373,NULL,0);
+
+/*Table structure for table `messages` */
+
+DROP TABLE IF EXISTS `messages`;
+
+CREATE TABLE `messages` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `message` text,
+  `from` int(11) unsigned NOT NULL,
+  `to` int(11) unsigned NOT NULL,
+  `datetime` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
+
+/*Data for the table `messages` */
+
+insert  into `messages`(`id`,`message`,`from`,`to`,`datetime`) values (1,'hello',372,373,'2014-07-14 08:09:12');
 
 /*Table structure for table `user_events` */
 
@@ -83,11 +101,11 @@ CREATE TABLE `user_events` (
   `datetime` datetime DEFAULT NULL,
   `is_checkedIn` tinyint(1) DEFAULT '0' COMMENT '0=not checkedIn, 1=checkedIn',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;
 
 /*Data for the table `user_events` */
 
-insert  into `user_events`(`id`,`user_id`,`event_id`,`datetime`,`is_checkedIn`) values (1,372,1,NULL,1),(2,372,2,NULL,1),(3,373,1,NULL,1),(4,373,2,'2014-06-11 09:56:17',1);
+insert  into `user_events`(`id`,`user_id`,`event_id`,`datetime`,`is_checkedIn`) values (1,372,1,NULL,1),(2,372,2,NULL,1),(3,373,1,NULL,1),(4,373,2,'2014-06-11 09:56:17',1),(5,372,6,'2014-07-14 05:19:44',0);
 
 /*Table structure for table `users` */
 

@@ -126,7 +126,14 @@ function login($username,$password, $type){
     $data = array();
     
 
-    $sql = "SELECT * FROM users where username=:username ";
+    //$sql = "SELECT * FROM users where username=:username ";
+    $sql = "SELECT 
+            (select count(*) from user_events where user_id=u.id and is_checkedIn=1) as checkins,
+            (select count(*) from followers where user_id=u.id) as follower,
+            (select count(*) from followers where follower_id=u.id) as following,
+            u.* FROM users u where u.username=:username";
+    
+    
     try{
         $stmt = $db->prepare($sql);  
         $stmt->bindParam("username", $username);
@@ -338,10 +345,22 @@ function getMyEvents($params)
             $i = 0;
             foreach($user_events as $event)
             {
-                $event_users = getUsersList($event['id']);
-                if($event_users['header']['error'] == 0)
+               	 // $event_users = getUsersList($event['id']);
+                  $users_list = getUserListArray($event['id']);  
+                  
+                /*
+                  
+                  $event_id = $event['id'];
+                	  
+                  $sql = "SELECT u.id,u.first_name,u.last_name,u.username,u.user_image,ue.is_checkedIn FROM users u INNER JOIN user_events ue ON u.id=ue.user_id WHERE ue.event_id=$event_id";
+			      $stmt = $db->query($sql);
+        		  $users_list = $stmt->fetchAll(PDO::FETCH_NAMED);
+               
+                */	
+
+                if(count($users_list)>0)
                 {
-                    $user_events[$i]['users_list'] = $event_users['header']['body'];
+                    $user_events[$i]['users_list'] = $users_list;
                 }    
                 $i++;
                 
@@ -364,11 +383,31 @@ function getMyEvents($params)
     echo json_encode($response);
 }
 
+
+function getUserListArray($event_id){
+  try{
+	
+	 global $app,$db,$response;
+
+	 $sql = "SELECT u.id,u.first_name,u.last_name,u.username,u.user_image,ue.is_checkedIn FROM users u INNER JOIN user_events ue ON u.id=ue.user_id WHERE ue.event_id=$event_id";
+	 $stmt = $db->query($sql);
+     $users_list = $stmt->fetchAll(PDO::FETCH_NAMED);
+     return $users_list;
+    
+    }catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+        
+    }
+        		  
+}
+
+
 function getUsersList($event_id)
 {
     global $app,$db,$response;
     
-    $sql = "SELECT u.id,u.first_name,u.last_name,u.username,ue.is_checkedIn FROM users u INNER JOIN user_events ue ON u.id=ue.user_id WHERE ue.event_id=$event_id";
+    $sql = "SELECT u.id,u.first_name,u.last_name,u.username,ue.is_checkedIn,u.user_image FROM users u INNER JOIN user_events ue ON u.id=ue.user_id WHERE ue.event_id=$event_id";
 
 
     try{
@@ -451,9 +490,8 @@ function getEventUserList($event_id)
 {
     global $app,$db,$response;
     
-    $users_list = getUsersList($event_id);
-
-    $app->response()->header("Content-Type", "application/json");
+    $users_list = getUserListArray($event_id);
+	$app->response()->header("Content-Type", "application/json");
     echo json_encode($users_list);
     
     
@@ -510,10 +548,10 @@ function searchEventByName($search)
             $i = 0;
             foreach($events as $event)
             {
-                $event_users = getUsersList($event['id']);
-                if($event_users['header']['error'] == 0)
+                $event_users = getUserListArray($event['id']);
+                if(count($event_users) == 0)
                 {
-                    $events[$i]['users_list'] = $event_users['header']['body'];
+                    $events[$i]['users_list'] = $event_users;
                 }    
                 $i++;
                 
@@ -628,22 +666,35 @@ function createEvent()
             }
             else
             {
-                $sql = "INSERT INTO events (name,description,address,start_date,end_date,image,created_date) values (:name,:description,:address,:start_date,:end_date,:image,:created_date,:latitude,:longitude)";
+                $sql = "INSERT INTO events (name,description,address,start_date,end_date,image,created_date,latitude,longitude,user_id) values ( :name, :description, :address, :start_date, :end_date, :image, :created_date, :latitude, :longitude, :user_id)";
                 $stmt = $db->prepare($sql);
                 
                 $created_date = date("Y-m-d h:i:s");
                 
-                $stmt->bindParam("name", $name);
-                $stmt->bindParam("description", $description);
-                $stmt->bindParam("address", $address);
-                $stmt->bindParam("start_date", $start_date);
-                $stmt->bindParam("end_date", $end_date);
-                $stmt->bindParam("created_date", $created_date);
-                $stmt->bindParam("image", $image);
-                $stmt->bindParam("latitude", $latitude);
-                $stmt->bindParam("longitude", $longitude);
-                $stmt->bindParam("user_id", $user_id);
+                $stmt->bindParam(":name", $name);
+                $stmt->bindParam(":description", $description);
+                $stmt->bindParam(":address", $address);
+                $stmt->bindParam(":start_date", $created_date);
+                $stmt->bindParam(":end_date", $created_date);
+                $stmt->bindParam(":created_date", $created_date);
+                $stmt->bindParam(":image", $image);
+                $stmt->bindParam(":latitude", $latitude);
+                $stmt->bindParam(":longitude", $longitude);
+                $stmt->bindParam(":user_id", $user_id,PDO::PARAM_INT);
+                //$st->bindValue( ":art", $art, PDO::PARAM_INT );
+
                 $stmt->execute();
+                
+                $event_id = $db->lastInsertId();
+                //autojoin
+                $sql = "INSERT INTO user_events (user_id,event_id,datetime) values (:user_id,:event_id,:datetime)";
+                $stmt = $db->prepare($sql);
+                $date = date("Y-m-d h:i:s");
+                $stmt->bindParam("user_id", $user_id);
+                $stmt->bindParam("event_id", $event_id);
+                $stmt->bindParam("datetime", $date);
+                $stmt->execute();
+
                 $response["header"]["error"] = 0;
                 $response["header"]["message"] = "Success";
             }    
@@ -747,6 +798,7 @@ function followUser()
     $req = $app->request();
     $follower_id = $req->params('follower_id');
     $user_id = $req->params('user_id');
+    $event_id = $req->params('event_id');
 
 
     $sql = "SELECT * FROM followers WHERE user_id=$user_id AND follower_id=$follower_id"; 
@@ -757,12 +809,13 @@ function followUser()
         
         if($data == false)
         {
-            $sql = "INSERT INTO followers (user_id,follower_id,datetime) values (:user_id,:follower_id,:datetime)";
+            $sql = "INSERT INTO followers (user_id,follower_id,datetime,event_id) values (:user_id,:follower_id,:datetime,:event_id)";
             $stmt = $db->prepare($sql);
             $date = date("Y-m-d h:i:s");
             $stmt->bindParam("user_id", $user_id);
             $stmt->bindParam("follower_id", $follower_id);
             $stmt->bindParam("datetime", $date);
+            $stmt->bindParam("event_id", $event_id);
             $stmt->execute();
             $response["header"]["error"] = 0;
             $response["header"]["message"] = "Success";        
@@ -791,14 +844,19 @@ function updatePassword()
     $old_password = $req->params('old_password');
     $new_password = $req->params('new_password');
     
-    $sql = "SELECT * FROM user_events WHERE user_id=$user_id"; 
+    $sql = "SELECT * FROM users WHERE id=:id"; 
 
     try{
-        $stmt   = $db->query($sql);
-        $data  = $stmt->fetch(PDO::FETCH_NAMED);
-                
-        if(is_array($data) && count($data) > 0)
+        
+        $stmt = $db->prepare($sql);
+        $stmt->bindParam(":id", $user_id);
+        $stmt->execute();
+ 
+        $data = (array)$stmt->fetchObject();                
+ 		
+ 	    if(is_array($data) && count($data) > 0)
         {
+        	
             if($data['password'] != MD5($old_password))
             {    
                 $response["header"]["error"] = 1;
@@ -807,10 +865,12 @@ function updatePassword()
             else
             {
                 $temp_password = MD5($new_password);
-                $sql = "UPDATE users set password='$new_password' WHERE user_id=:user_id";
+                //echo $new_password;
+                $sql = "UPDATE users set password='$temp_password' WHERE id=:id";
+                
                 $stmt = $db->prepare($sql);
                 
-                $stmt->bindParam("user_id", $user_id);
+                $stmt->bindParam(":id", $user_id);
                 
                 $stmt->execute();
                 $response["header"]["error"] = 0;

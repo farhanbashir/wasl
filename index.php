@@ -494,7 +494,7 @@ function getUserListArray($event_id){
 	
 	 global $app,$db,$response;
 
-	 $sql = "SELECT u.id,u.first_name,u.last_name,u.username,u.user_image,ue.is_checkedIn FROM users u INNER JOIN user_events ue ON u.id=ue.user_id WHERE ue.event_id=$event_id";
+	 $sql = "SELECT u.id,u.first_name,u.last_name,u.username,u.user_image,u.designation,ue.is_checkedIn FROM users u INNER JOIN user_events ue ON u.id=ue.user_id WHERE ue.event_id=$event_id";
 	 $stmt = $db->query($sql);
      $users_list = $stmt->fetchAll(PDO::FETCH_NAMED);
      return $users_list;
@@ -682,7 +682,7 @@ function searchEventByName($search)
             foreach($events as $event)
             {
                 $event_users = getUserListArray($event['id']);
-                if(count($event_users) == 0)
+                if(count($event_users) > 0)
                 {
                     $events[$i]['users_list'] = $event_users;
                 }    
@@ -735,7 +735,8 @@ function searchEventByLocation($latitude,$longitude)
             foreach($events as $event)
             {
                 $event_users = getUserListArray($event['id']);
-                if(count($event_users) == 0)
+                
+                if(count($event_users) > 0)
                 {
                     $events[$i]['users_list'] = $event_users;
                 }    

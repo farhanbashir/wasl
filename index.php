@@ -22,6 +22,7 @@ $app->get('/users','getUsers');
 $app->get("/login/:username/:password/:type",'login');
 $app->get("/getProfile/:username",'getProfile');
 $app->get("/getMyEvents/:params+",'getMyEvents');
+$app->get("/getEvent/:event_id",'getEvent');
 $app->get("/getEventUserList/:eventid",'getEventUserList');
 $app->get("/getEventFeedByEventId/:eventid",'getEventFeedByEventId');
 $app->get("/getFollower/:user_id",'getFollower');
@@ -488,6 +489,49 @@ function getMyEvents($params)
     echo json_encode($response);
 }
 
+function getEvent($event_id)
+{
+    global $app, $db, $response;
+    
+    $sql = "SELECT e.* FROM events e WHERE e.id=$event_id";
+    
+    try{
+        $stmt   = $db->query($sql);
+        $events  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        
+        if(count($events) > 0)
+        {    
+            $i = 0;
+            foreach($events as $event)
+            {
+                  $users_list = getUserListArray($event['id']);  
+                  
+    
+                if(count($users_list)>0)
+                {
+                    $events[$i]['users_list'] = $users_list;
+                }    
+                $i++;
+                
+            }
+        }    
+            
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = "Success";
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+
+
+    $response["body"] = $events;
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}
+
 
 function getUserListArray($event_id){
   try{
@@ -828,7 +872,7 @@ function createEvent()
         if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
             $image = $uploadfile;
             $path = substr($_SERVER['REQUEST_URI'],0,stripos($_SERVER['REQUEST_URI'], "index.php"));
-            $user_image = $_SERVER['SERVER_NAME'].$path.$user_image;    
+            $image = $_SERVER['SERVER_NAME'].$path.$user_image;    
         } else {
             $response["header"]["error"] = 1;
             $response["header"]["message"] = 'Some error';

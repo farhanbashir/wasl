@@ -42,17 +42,9 @@ $app->post('/followUser','followUser');
 $app->post('/sendMessage','sendMessage');
 $app->post('/imgSave','imgSave');
 $app->post('/editProfile','editProfile');
-
-/*
-
 $app->post('/forgotPassword','forgotPassword');
 
-
-
-
-
-
-
+/*
 $app->post("/postStatusOnEvent",'postStatusOnEvent');
 */
 
@@ -184,6 +176,13 @@ function login($username,$password, $type){
         
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
+
+}
+
+function rand_string( $length ) {
+
+    $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    return substr(str_shuffle($chars),0,$length);
 
 }
 
@@ -1153,6 +1152,64 @@ function updatePassword()
     echo json_encode($response);
     
 }    
+
+function forgotPassword()
+{
+    global $app ,$db, $response;
+    $req = $app->request();
+    $username = $req->params('username');
+    
+    $sql = "SELECT count(*) FROM users WHERE username=:username"; 
+
+    try{
+        
+        $stmt = $db->prepare($sql);
+        $stmt->bindParam(":username", $username);
+        $stmt->execute();
+ 
+        $result = $stmt->fetchColumn();                
+ 		
+ 	    if($result > 0)
+        {
+        	
+            
+                $temp_password = rand_string(8);
+                $md5 = md5($temp_password);
+                //echo $new_password;
+                $sql = "UPDATE users set password='$md5' WHERE username=:username";
+                
+                $stmt = $db->prepare($sql);
+                
+                $stmt->bindParam(":username", $username);
+                
+                $stmt->execute();
+                
+				//email work here
+				$subject = 'WASL - Your password has been changed successfully';
+				$message = '';
+				mail($username, $subject, $message);
+				
+                $response["header"]["error"] = 0;
+                $response["header"]["message"] = "Success".$temp_password;
+                
+        }
+        else
+        {
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = 'Invalid Username';
+        }    
+
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+    
+}    
+
 
 // POST route
 $app->post(

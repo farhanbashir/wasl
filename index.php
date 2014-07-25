@@ -290,6 +290,7 @@ function editProfile() {
                 first_name=:first_name,
                 last_name=:last_name,
                 company_email=:company_email,
+                company_name=:company_name,
                 date_of_birth=:date_of_birth,
                 designation=:designation,
                 phone=:phone,
@@ -320,6 +321,7 @@ function editProfile() {
         {
             try{
                 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $db->setAttribute(PDO::ATTR_EMULATE_PREPARES,true);
                 $stmt = $db->prepare($sql);  
                 $datetime = date("Y-m-d h:i:s");
                 $stmt->bindParam(":first_name", $first_name);
@@ -333,8 +335,8 @@ function editProfile() {
                 $stmt->bindParam(":user_image", $user_image);
                 $stmt->bindParam(":user_id",$user_id);
                 $stmt->bindParam(":modified",$datetime);
-                $stmt->execute();
-                
+                $stmt->execute() ;
+               
                 $response["header"]["error"] = 0;
                 $response["header"]["message"] = "Success";
 
@@ -375,7 +377,7 @@ function userAvailable($username)
 	
 	try{
 		$stmt = $db->prepare($sql);  
-        $stmt->bindParam("username", $username);
+        $stmt->bindParam(":username", $username);
 		$result = $stmt->execute();
 		$info  = $stmt->fetch(PDO::FETCH_NAMED);
 	   

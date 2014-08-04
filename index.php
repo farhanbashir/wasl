@@ -213,13 +213,14 @@ function signup() {
         {
             $uploaddir = 'images/';
             $file = basename($_FILES['file']['name']);
-            
+            $protocol = stripos($_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://';
+			
             $uploadfile = $uploaddir . $file;
             
             if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
                 $user_image = $uploadfile;
                 $path = substr($_SERVER['REQUEST_URI'],0,stripos($_SERVER['REQUEST_URI'], "index.php"));
-                $user_image = $_SERVER['SERVER_NAME'].$path.$user_image;    
+                $user_image = $protocol.$_SERVER['SERVER_NAME'].$path.$user_image;    
             } else {
                 $response["header"]["error"] = 1;
                 $response["header"]["message"] = 'Some error';
@@ -304,13 +305,14 @@ function editProfile() {
         {
             $uploaddir = 'images/';
             $file = basename($_FILES['file']['name']);
-            
+            $protocol = stripos($_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://';
+			
             $uploadfile = $uploaddir . $file;
             
             if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
                 $user_image = $uploadfile;
                 $path = substr($_SERVER['REQUEST_URI'],0,stripos($_SERVER['REQUEST_URI'], "index.php"));
-                $user_image = $_SERVER['SERVER_NAME'].$path.$user_image;    
+                $user_image = $protocol.$_SERVER['SERVER_NAME'].$path.$user_image;    
             } else {
                 $response["header"]["error"] = 1;
                 $response["header"]["message"] = 'Some error';
@@ -869,11 +871,12 @@ function createEvent()
         $uploaddir = 'images/';
         $file = basename($_FILES['file']['name']);
         $uploadfile = $uploaddir . $file;
-
+		$protocol = stripos($_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://';
+		
         if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
             $image = $uploadfile;
             $path = substr($_SERVER['REQUEST_URI'],0,stripos($_SERVER['REQUEST_URI'], "index.php"));
-            $image = $_SERVER['SERVER_NAME'].$path.$user_image;    
+            $image = $protocol.$_SERVER['SERVER_NAME'].$path.$image;
         } else {
             $response["header"]["error"] = 1;
             $response["header"]["message"] = 'Some error';

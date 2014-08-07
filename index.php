@@ -3,7 +3,8 @@
 error_reporting(E_ALL); 
  
 require "config.php"; 
-require "functions.php"; 
+require "functions.php";
+
 //require "NotORM.php";
 
 $db = new PDO("mysql:host=".$config["db"]["db_host"].";dbname=".$config["db"]["db_name"], $config["db"]["db_user"], $config["db"]["db_password"]);
@@ -22,7 +23,7 @@ $app->get('/users','getUsers');
 $app->get("/login/:username/:password/:type",'login');
 $app->get("/getProfile/:username",'getProfile');
 $app->get("/getMyEvents/:params+",'getMyEvents');
-$app->get("/getEvent/:event_id",'getEvent');
+$app->get("/getEvent/:params+",'getEvent');
 $app->get("/getEventUserList/:eventid",'getEventUserList');
 $app->get("/getEventFeedByEventId/:eventid",'getEventFeedByEventId');
 $app->get("/getFollower/:user_id",'getFollower');
@@ -30,7 +31,8 @@ $app->get("/getMessages/:user_id",'getMessages');
 $app->get("/getFollowing/:user_id",'getFollowing');
 $app->get("/searchEventByName/:search",'searchEventByName');
 $app->get("/searchEventByLocation/:latitude/:longitude",'searchEventByLocation');
-
+$app->get("/test","test");
+$app->get("/verify/:email/:code",'verify');
 
 $app->post('/signup','signup');
 $app->post("/createEvent",'createEvent');
@@ -47,6 +49,11 @@ $app->post('/forgotPassword','forgotPassword');
 /*
 $app->post("/postStatusOnEvent",'postStatusOnEvent');
 */
+
+function test()
+{global $config;
+	debug($config);
+}
 
 function getUsers()
 {
@@ -76,6 +83,46 @@ function getUsers()
 	
 }
 
+function send_notification_android($registatoin_ids, $message) {
+echo "here";die;
+        // Set POST variables
+        $url = 'https://android.googleapis.com/gcm/send';
+
+        $fields = array(
+            'registration_ids' => $registatoin_ids,
+            'data' => $message,
+        );
+		
+		//print_r($fields);die;
+        $headers = array(
+            'Authorization: key=' . self::GOOGLE_API_KEY,
+            'Content-Type: application/json'
+        );
+        // Open connection
+        $ch = curl_init();
+
+        // Set the url, number of POST vars, POST data
+        curl_setopt($ch, CURLOPT_URL, $url);
+
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        // Disabling SSL Certificate support temporarly
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
+
+        // Execute post
+        $result = curl_exec($ch);
+        if ($result === FALSE) {
+            die('Curl failed: ' . curl_error($ch));
+        }
+
+        // Close connection
+        curl_close($ch);
+        //echo $result;
+    }
 
 function getProfile($username){
 	global $app,$db;
@@ -142,11 +189,16 @@ function login($username,$password, $type){
         {
         	if($type == 0)
 			{
-	            if($data["password"] == MD5($password))
+	            if($data["password"] == MD5($password) && $data['verified'] == 1)
 	            {
 	                $response["header"]["error"] = 0;
 	                $response["header"]["message"] = "Success";
 	            }
+                elseif($data["password"] == MD5($password) && $data['verified'] == 0)
+                {
+                    $response["header"]["error"] = 1;
+                    $response["header"]["message"] = "Email address not verified";
+                }    
 	            else
 	            {
 	                $data = array();
@@ -492,9 +544,11 @@ function getMyEvents($params)
     echo json_encode($response);
 }
 
-function getEvent($event_id)
+function getEvent($params)
 {
     global $app, $db, $response;
+    
+    $event_id = $params[0];
     
     $sql = "SELECT e.* FROM events e WHERE e.id=$event_id";
     
@@ -507,8 +561,43 @@ function getEvent($event_id)
             $i = 0;
             foreach($events as $event)
             {
-                  $users_list = getUserListArray($event['id']);  
-                  
+                $users_list = getUserListArray($event['id']);  
+                
+                if(count($params) > 1)
+                {
+                    $user_id = $params[1];
+                    $following_users = getFollowingInternal($user_id);
+                    
+                    if(count($following_users) > 0)
+                    {
+                        $following_users_ids = array();
+                        foreach($following_users as $following_user)
+                        {
+                            $following_users_ids[] = $following_user['id'];
+                        }    
+                        
+                        foreach($users_list as $key=>$val)
+                        {
+                            if(in_array($users_list[$key]['id'],$following_users_ids))
+                            {
+                                $users_list[$key]['is_followed'] = true;
+                            }
+                            else
+                            {
+                                $users_list[$key]['is_followed'] = false;
+                            }    
+                        }    
+                    }
+                    else
+                    {
+                        foreach($users_list as $key=>$val)
+                        {
+                            $users_list[$key]['is_followed'] = false;
+                        }
+                    }    
+                    
+                }    
+                
     
                 if(count($users_list)>0)
                 {
@@ -635,6 +724,31 @@ function getMessages($user_id)
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
 }
+
+function getFollowingInternal($user_id)
+{
+    global $app,$db,$response;
+
+    $sql = "select u.* from followers f
+            inner join users u on u.id=f.user_id
+            where follower_id=$user_id";
+
+    $user_list = array();
+    try{
+        $stmt   = $db->query($sql);
+        $users_list  = $stmt->fetchAll(PDO::FETCH_NAMED);
+
+        return $users_list;
+
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+        return false;
+    }
+
+    
+}    
 
 function getFollowing($user_id)
 {
@@ -1156,6 +1270,53 @@ function updatePassword()
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
     
+}    
+
+function verify($email,$code)
+{
+    global $app ,$db, $response;
+    
+    
+    $sql = "SELECT * FROM users WHERE username=:email AND password=:password"; 
+
+    try{
+
+        $stmt = $db->prepare($sql);
+        $stmt->bindParam(":email", $email);
+        $stmt->bindParam(":password", $code);
+        $stmt->execute();
+
+        $data = $stmt->fetchColumn();                
+        
+        if($data != false)
+        {
+
+            $sql = "UPDATE users set verified=1 WHERE username=:username";
+
+            $stmt = $db->prepare($sql);
+
+            $stmt->bindParam(":username", $email);
+
+            $stmt->execute();
+            $response["header"]["error"] = 0;
+            $response["header"]["message"] = "Success";
+                
+        }
+        else
+        {
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = 'Some error';
+        }    
+
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+
 }    
 
 function forgotPassword()

@@ -1,6 +1,6 @@
 /*
-SQLyog Enterprise - MySQL GUI v7.14 
-MySQL - 5.5.34-0ubuntu0.12.10.1 : Database - wasl
+SQLyog Enterprise - MySQL GUI v7.02 
+MySQL - 5.6.12-log : Database - wasl
 *********************************************************************
 */
 
@@ -14,6 +14,20 @@ MySQL - 5.5.34-0ubuntu0.12.10.1 : Database - wasl
 CREATE DATABASE /*!32312 IF NOT EXISTS*/`wasl` /*!40100 DEFAULT CHARACTER SET latin1 */;
 
 USE `wasl`;
+
+/*Table structure for table `devices` */
+
+DROP TABLE IF EXISTS `devices`;
+
+CREATE TABLE `devices` (
+  `device_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) unsigned NOT NULL,
+  `uid` varchar(255) DEFAULT NULL,
+  `type` tinyint(1) DEFAULT NULL COMMENT '0=iphone,1=android',
+  PRIMARY KEY (`device_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+/*Data for the table `devices` */
 
 /*Table structure for table `event_statuses` */
 

@@ -296,6 +296,8 @@ function signup() {
                 $stmt->bindParam(":user_image", $user_image);
                 $stmt->execute();
 
+                sendEmail($username, 'WASL - Please verify your email', 'Your verification code is '.$password);
+                
                 $user["user_id"] = $db->lastInsertId();
                 $response["body"] = $user;
                 $response["header"]["error"] = 0;
@@ -1270,7 +1272,16 @@ function updatePassword()
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
     
-}    
+}   
+
+function sendEmail($data)
+{
+    $to = $data['to'];
+    $subject = $data['subject'];
+    $message = $data['message'];
+    
+    mail($to, $subject, $message);
+}
 
 function verify($email,$code)
 {
@@ -1352,11 +1363,12 @@ function forgotPassword()
                 
 				//email work here
 				$subject = 'WASL - Your password has been changed successfully';
-				$message = '';
-				mail($username, $subject, $message);
+            $message = 'Your temporary password is '.$temp_password;
+                $email = array('to'=>$username,'subject'=>$subject, 'message'=>$message);
+				sendEmail($email);
 				
                 $response["header"]["error"] = 0;
-                $response["header"]["message"] = "Success".$temp_password;
+                $response["header"]["message"] = "Success";
                 
         }
         else

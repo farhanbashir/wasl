@@ -20,7 +20,6 @@ $app = new \Slim\Slim(array("MODE" => "development"));
 $response = array();
 
 $app->get('/users','getUsers');
-$app->get("/login/:username/:password/:type",'login');
 $app->get("/getProfile/:username",'getProfile');
 $app->get("/getMyEvents/:params+",'getMyEvents');
 $app->get("/getEvent/:params+",'getEvent');
@@ -35,6 +34,7 @@ $app->get("/test","test");
 $app->get("/verify/:email/:code",'verify');
 
 $app->post('/signup','signup');
+$app->post("/login",'login');
 $app->post("/createEvent",'createEvent');
 $app->post("/joinThisEvent",'joinThisEvent');
 $app->post("/checkedInThisEvent",'checkedInThisEvent');
@@ -166,8 +166,15 @@ function getProfile($username){
 
 }
 
-function login($username,$password, $type){
-    global $app, $db, $response;	
+function login(){
+    global $app, $db, $response;
+    
+    $req = $app->request(); // Getting parameter with names
+    $username = $req->params('username'); // Getting parameter with names
+    $password = $req->params('password'); // Getting parameter with names
+    $type = $req->params('type'); // Getting parameter with names
+    $device_id = $req->params('device_id'); // Getting parameter with names
+    $device_type = $req->params('device_type'); // Getting parameter with names
     $data = array();
     
     //$sql = "SELECT * FROM users where username=:username ";
@@ -191,6 +198,44 @@ function login($username,$password, $type){
 			{
 	            if($data["password"] == MD5($password) && $data['verified'] == 1)
 	            {
+                    $sql = "select count(*) from devices where user_id=:user_id and type=:device_type";
+                    
+                    $stmt = $db->prepare($sql);
+                    $stmt->bindParam(":user_id", $data['id']);
+                    $stmt->bindParam(":device_type", $device_type);
+                    $stmt->execute();
+                    
+                    $present = $stmt->fetchColumn();
+
+                    
+
+                    if($present != false)
+                    {
+                        //update
+                        
+                        $sql = "UPDATE devices set uid='$device_id' WHERE user_id=:user_id and type=:device_type";
+
+                        $stmt = $db->prepare($sql);
+
+                        $stmt->bindParam(":user_id", $data['id']);
+                        $stmt->bindParam(":device_type", $device_type);
+
+                        $stmt->execute();    
+                    }
+                    else
+                    {
+                        //insert
+                        $sql = "insert into devices (user_id,uid,`type`) values (:user_id,:device_id,:device_type)";
+
+                        $stmt = $db->prepare($sql);
+
+                        $stmt->bindParam(":user_id", $data['id']);
+                        $stmt->bindParam(":device_type", $device_type);
+                        $stmt->bindParam(":device_id", $device_id);
+
+                        $stmt->execute();    
+                        
+                    }   
 	                $response["header"]["error"] = 0;
 	                $response["header"]["message"] = "Success";
 	            }

@@ -340,8 +340,9 @@ function signup() {
                 $stmt->bindParam(":company_name", $company_name);
                 $stmt->bindParam(":user_image", $user_image);
                 $stmt->execute();
-
-                sendEmail($username, 'WASL - Please verify your email', 'Your verification code is '.$password);
+                
+                $email_data = array('to'=>$username,'subject'=>'WASL - Please verify your email', 'message'=>'Your verification code is '.$password);
+                sendEmail($email_data );
                 
                 $user["user_id"] = $db->lastInsertId();
                 $response["body"] = $user;
@@ -1408,7 +1409,7 @@ function forgotPassword()
                 
 				//email work here
 				$subject = 'WASL - Your password has been changed successfully';
-            $message = 'Your temporary password is '.$temp_password;
+                $message = 'Your temporary password is '.$temp_password;
                 $email = array('to'=>$username,'subject'=>$subject, 'message'=>$message);
 				sendEmail($email);
 				

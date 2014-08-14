@@ -341,7 +341,7 @@ function signup() {
                 $stmt->bindParam(":user_image", $user_image);
                 $stmt->execute();
                 
-                $email_data = array('to'=>$username,'subject'=>'WASL - Please verify your email', 'message'=>'Your verification code is '.substr($password,0,6);
+                $email_data = array('to'=>$username,'subject'=>'WASL - Please verify your email', 'message'=>'Your verification code is '.substr($password,0,6));
                 sendEmail($email_data );
                 
                 $user["user_id"] = $db->lastInsertId();

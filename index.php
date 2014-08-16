@@ -288,80 +288,127 @@ function signup() {
 	$user = array("user_id"=>0);
 	
 	$req = $app->request(); // Getting parameter with names
-    $first_name = $req->params('first_name'); // Getting parameter with names
-    $last_name = $req->params('last_name'); // Getting parameter with names
-    $username = $req->params('username'); // Getting parameter with names
-    $password = md5($req->params('password')); // Getting parameter with names
-    $company_email= $req->params('company_email');
-    $company_name= $req->params('company_name');
-    $dob= $req->params('dob');
-    $designation= $req->params('designation');
-    $phone= $req->params('phone');
-    $office_no= $req->params('office_no');
-    $user_image = '';
-    
-    if(userAvailable($username))
-    {
-        $sql = "INSERT INTO users (first_name,last_name,username,password,company_email,date_of_birth,designation,phone,office_no,company_name,user_image) 
-                values 
-                (:first_name,:last_name,:username,:password,:company_email,:date_of_birth,:designation,:phone,:office_no,:company_name,:user_image)";
+	$type = $req->params('type'); // Getting parameter with names
 	
-        if(isset($_FILES['file']))
-        {
-            $uploaddir = 'images/';
-            $file = basename($_FILES['file']['name']);
-            $protocol = stripos($_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://';
-			
-            $uploadfile = $uploaddir . $file;
-            
-            if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
-                $user_image = $uploadfile;
-                $path = substr($_SERVER['REQUEST_URI'],0,stripos($_SERVER['REQUEST_URI'], "index.php"));
-                $user_image = $protocol.$_SERVER['SERVER_NAME'].$path.$user_image;    
-            } else {
-                $response["header"]["error"] = 1;
-                $response["header"]["message"] = 'Some error';
-            }
-        }
-        
-        if(count($response) == 0)
-        {
-            try{
-                $stmt = $db->prepare($sql);  
-                $stmt->bindParam(":first_name", $first_name);
-                $stmt->bindParam(":last_name", $last_name);
-                $stmt->bindParam(":username", $username);
-                $stmt->bindParam(":password", $password);
-                $stmt->bindParam(":company_email", $company_email);
-                $stmt->bindParam(":date_of_birth", $dob);
-                $stmt->bindParam(":designation", $designation);
-                $stmt->bindParam(":phone", $phone);
-                $stmt->bindParam(":office_no", $office_no);
-                $stmt->bindParam(":company_name", $company_name);
-                $stmt->bindParam(":user_image", $user_image);
-                $stmt->execute();
-                
-                $email_data = array('to'=>$username,'subject'=>'WASL - Please verify your email', 'message'=>'Your verification code is '.substr($password,0,6));
-                sendEmail($email_data );
-                
-                $user["user_id"] = $db->lastInsertId();
-                $response["body"] = $user;
-                $response["header"]["error"] = 0;
-                $response["header"]["message"] = "Success";
-
-            }
-            catch(PDOException $e)
-            {
-                $response["header"]["error"] = 1;
-                $response["header"]["message"] = $e->getMessage();
-            }
-        }    
-    }
-    else
-    {
-        $response["header"]["error"] = 1;
-        $response["header"]["message"] = 'User already exist';
-    }    
+	if($type == 0)
+	{
+	    $first_name = $req->params('first_name'); // Getting parameter with names
+	    $last_name = $req->params('last_name'); // Getting parameter with names
+	    $username = $req->params('username'); // Getting parameter with names
+	    $password = md5($req->params('password')); // Getting parameter with names
+	    $company_email= $req->params('company_email');
+	    $company_name= $req->params('company_name');
+	    $dob= $req->params('dob');
+	    $designation= $req->params('designation');
+	    $phone= $req->params('phone');
+	    $office_no= $req->params('office_no');
+	    $user_image = '';
+	    
+	    if(userAvailable($username,$type))
+	    {
+	        $sql = "INSERT INTO users (first_name,last_name,username,password,company_email,date_of_birth,designation,phone,office_no,company_name,user_image) 
+	                values 
+	                (:first_name,:last_name,:username,:password,:company_email,:date_of_birth,:designation,:phone,:office_no,:company_name,:user_image)";
+		
+	        if(isset($_FILES['file']))
+	        {
+	            $uploaddir = 'images/';
+	            $file = basename($_FILES['file']['name']);
+	            $protocol = stripos($_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://';
+				
+	            $uploadfile = $uploaddir . $file;
+	            
+	            if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
+	                $user_image = $uploadfile;
+	                $path = substr($_SERVER['REQUEST_URI'],0,stripos($_SERVER['REQUEST_URI'], "index.php"));
+	                $user_image = $protocol.$_SERVER['SERVER_NAME'].$path.$user_image;    
+	            } else {
+	                $response["header"]["error"] = 1;
+	                $response["header"]["message"] = 'Some error';
+	            }
+	        }
+	        
+	        if(count($response) == 0)
+	        {
+	            try{
+	                $stmt = $db->prepare($sql);  
+	                $stmt->bindParam(":first_name", $first_name);
+	                $stmt->bindParam(":last_name", $last_name);
+	                $stmt->bindParam(":username", $username);
+	                $stmt->bindParam(":password", $password);
+	                $stmt->bindParam(":company_email", $company_email);
+	                $stmt->bindParam(":date_of_birth", $dob);
+	                $stmt->bindParam(":designation", $designation);
+	                $stmt->bindParam(":phone", $phone);
+	                $stmt->bindParam(":office_no", $office_no);
+	                $stmt->bindParam(":company_name", $company_name);
+	                $stmt->bindParam(":user_image", $user_image);
+	                $stmt->execute();
+	                
+	                $email_data = array('to'=>$username,'subject'=>'WASL - Please verify your email', 'message'=>'Your verification code is '.substr($password,0,6));
+	                sendEmail($email_data );
+	                
+	                $user["user_id"] = $db->lastInsertId();
+	                $response["body"] = $user;
+	                $response["header"]["error"] = 0;
+	                $response["header"]["message"] = "Success";
+	
+	            }
+	            catch(PDOException $e)
+	            {
+	                $response["header"]["error"] = 1;
+	                $response["header"]["message"] = $e->getMessage();
+	            }
+	        }    
+	    }
+	    else
+	    {
+	        $response["header"]["error"] = 1;
+	        $response["header"]["message"] = 'User already exist';
+	    }
+	}	
+	else 
+	{
+		//linkedin
+		$linkedin_id = $req->params('linkedin_id');
+		$token = $req->params('token');
+		
+		if(userAvailable($linkedin_id, $type))
+		{
+			$sql = "INSERT INTO users (username,type,linkedin_id,token,verified) 
+	                values 
+	                (:username,:type,:linkedin_id,:token,:verified)";
+					
+			try{
+					$verified = 1;
+	                $stmt = $db->prepare($sql);  
+	                $stmt->bindParam(":linkedin_id", $linkedin_id);
+					$stmt->bindParam(":username", $linkedin_id);
+	                $stmt->bindParam(":token", $token);
+	                $stmt->bindParam(":type", $type);
+	                $stmt->bindParam(":verified", $verified);
+					
+	                $stmt->execute();
+	                
+	                
+	                $user["user_id"] = $db->lastInsertId();debug($stmt->errorInfo(),1);
+	                $response["body"] = $user;
+	                $response["header"]["error"] = 0;
+	                $response["header"]["message"] = "Success";
+	
+	            }
+	            catch(PDOException $e)
+	            {
+	                $response["header"]["error"] = 1;
+	                $response["header"]["message"] = $e->getMessage();
+	            }
+		}
+		else
+		{
+			$response["header"]["error"] = 1;
+	        $response["header"]["message"] = 'User already exist';
+		}
+	}	    
     
         
     $app->response()->header("Content-Type", "application/json");
@@ -383,9 +430,21 @@ function editProfile() {
     $phone= $req->params('phone');
     $office_no= $req->params('office_no');
     $user_id = $req->params('user_id');
-    $user_image = '';
+	$type = $req->params('type');
+	$user_image = '';
     
-    if(!userAvailable($username))
+    if($type == 1)
+	{
+		$linkedin_id = $req->params('linkedin_id');
+		$token = $req->params('token');
+		$useravailable = userAvailable($linkedin_id, $type);
+	}
+	else
+	{
+		$useravailable = userAvailable($username, $type);	
+	}
+	
+    if(!$useravailable)
     {
         $sql = "UPDATE users SET 
                 first_name=:first_name,
@@ -472,10 +531,18 @@ function parms($string,$data) {
     return $string;
 }
 
-function userAvailable($username)
+function userAvailable($username,$type)
 {
 	global $db;
-	$sql = "SELECT * FROM users WHERE username=:username limit 1";
+	if($type == 0)
+	{
+		$sql = "SELECT * FROM users WHERE username=:username limit 1";	
+	}
+	else
+	{
+		$sql = "SELECT * FROM users WHERE linkedin_id=:username limit 1";
+	}	
+	
 	
 	try{
 		$stmt = $db->prepare($sql);  

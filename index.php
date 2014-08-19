@@ -51,8 +51,10 @@ $app->post("/postStatusOnEvent",'postStatusOnEvent');
 */
 
 function test()
-{global $config;
-	debug($config);
+{
+    
+	$data = array("from"=>372,"to"=>373,"message"=>"aby o");
+    //insertNotification($data);
 }
 
 function getUsers()
@@ -275,6 +277,28 @@ function login(){
     echo json_encode($response);
 
 }
+
+function insertNotification($data)
+{
+    global $db;
+    
+    $from = (isset($data["from"])) ? $data["from"] : 0;
+    $to = (isset($data["to"])) ? $data["to"] : 0;
+    $message = $data["message"];
+    $datetime = date("Y-m-d h:i:s");
+    $event_id = $data["event_id"];
+    
+    $sql = "INSERT INTO notifications (`from`,`to`,`message`,`datetime`,event_id) VALUES (:from,:to,:message,:datetime,:event_id)";
+    
+    $stmt = $db->prepare($sql);  
+    $stmt->bindParam(":from", $from);
+    $stmt->bindParam(":to", $to);
+    $stmt->bindParam(":message", $message);
+    $stmt->bindParam(":datetime", $datetime);
+    $stmt->bindParam(":event_id", $event_id);
+    $stmt->execute();
+    
+}    
 
 function rand_string( $length ) {
 
@@ -1067,6 +1091,14 @@ function joinThisEvent()
             $stmt->bindParam("event_id", $event_id);
             $stmt->bindParam("datetime", $date);
             $stmt->execute();
+    
+            $sql = "SELECT * FROM events WHERE id=$event_id";
+            $stmt   = $db->query($sql);
+            $event  = $stmt->fetch(PDO::FETCH_NAMED);
+            
+            $notification_data = array("from"=>$user_id,"to"=>$event['user_id'] ,"message"=>"joined the event","event_id"=>$event_id);
+            insertNotification($notification_data);
+            
             $response["header"]["error"] = 0;
             $response["header"]["message"] = "Success";
         }    
@@ -1277,6 +1309,10 @@ function followUser()
             $stmt->bindParam(":datetime", $date);
             $stmt->bindParam(":event_id", $event_id);
             $stmt->execute();
+            
+            $notification_data = array("from"=>$follower_id,"to"=>$user_id ,"message"=>"following the user","event_id"=>$event_id);
+            insertNotification($notification_data);
+            
             $response["header"]["error"] = 0;
             $response["header"]["message"] = "Success";        
         }

@@ -172,49 +172,46 @@ function login(){
     global $app, $db, $response;
     
     $req = $app->request(); // Getting parameter with names
-    $username = $req->params('username'); // Getting parameter with names
-    $password = $req->params('password'); // Getting parameter with names
     $type = $req->params('type'); // Getting parameter with names
     $device_id = $req->params('device_id'); // Getting parameter with names
     $device_type = $req->params('device_type'); // Getting parameter with names
-    $data = array();
+    //$data = array();
     
-    //$sql = "SELECT * FROM users where username=:username ";
-    $sql = "SELECT 
+    if($type == 1)
+    {
+        $linkedin_id = $req->params('linkedin_id');
+        $token = $req->params('token');
+        $sql = "SELECT 
             (select count(*) from user_events where user_id=u.id and is_checkedIn=1) as checkins,
             (select count(*) from followers where user_id=u.id) as follower,
             (select count(*) from followers where follower_id=u.id) as following,
-            u.* FROM users u where u.username=:username";
-    
-    
-    try{
-        $stmt = $db->prepare($sql);  
-        $stmt->bindParam("username", $username);
-        $stmt->execute();
-        //$stmt   = $db->query($sql);
-        $data  = $stmt->fetch(PDO::FETCH_NAMED);
+            u.* FROM users u where u.linkedin_id=:linkedin_id";
         
-        if(count($data))
-        {
-        	if($type == 0)
-			{
-	            if($data["password"] == MD5($password) && $data['verified'] == 1)
-	            {
+        try{
+            $stmt = $db->prepare($sql);  
+            $stmt->bindParam("linkedin_id", $linkedin_id);
+            $stmt->execute();
+            //$stmt   = $db->query($sql);
+            $data  = $stmt->fetch(PDO::FETCH_NAMED);
+            
+            if(is_array($data) && count($data))
+            {
+                
                     $sql = "select count(*) from devices where user_id=:user_id and type=:device_type";
-                    
+
                     $stmt = $db->prepare($sql);
                     $stmt->bindParam(":user_id", $data['id']);
                     $stmt->bindParam(":device_type", $device_type);
                     $stmt->execute();
-                    
+
                     $present = $stmt->fetchColumn();
 
-                    
+
 
                     if($present != false)
                     {
                         //update
-                        
+
                         $sql = "UPDATE devices set uid='$device_id' WHERE user_id=:user_id and type=:device_type";
 
                         $stmt = $db->prepare($sql);
@@ -236,39 +233,116 @@ function login(){
                         $stmt->bindParam(":device_id", $device_id);
 
                         $stmt->execute();    
-                        
+
                     }   
-	                $response["header"]["error"] = 0;
-	                $response["header"]["message"] = "Success";
-	            }
+                    $response["header"]["error"] = 0;
+                    $response["header"]["message"] = "Success";
+                
+            }
+            else
+            {
+                $response["header"]["error"] = 1;
+                $response["header"]["message"] = "User is not signed up";
+            }
+
+
+        }
+        catch(PDOException $e){
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = $e->getMessage();
+        }
+        
+    }
+    else
+    {
+        $username = $req->params('username'); // Getting parameter with names
+        $password = $req->params('password'); // Getting parameter with names
+        
+        //$sql = "SELECT * FROM users where username=:username ";
+        $sql = "SELECT 
+            (select count(*) from user_events where user_id=u.id and is_checkedIn=1) as checkins,
+            (select count(*) from followers where user_id=u.id) as follower,
+            (select count(*) from followers where follower_id=u.id) as following,
+            u.* FROM users u where u.username=:username";
+        
+        try{
+            $stmt = $db->prepare($sql);  
+            $stmt->bindParam("username", $username);
+            $stmt->execute();
+            //$stmt   = $db->query($sql);
+            $data  = $stmt->fetch(PDO::FETCH_NAMED);
+
+            if(is_array($data) && count($data))
+            {
+                if($data["password"] == MD5($password) && $data['verified'] == 1)
+                {
+                    $sql = "select count(*) from devices where user_id=:user_id and type=:device_type";
+
+                    $stmt = $db->prepare($sql);
+                    $stmt->bindParam(":user_id", $data['id']);
+                    $stmt->bindParam(":device_type", $device_type);
+                    $stmt->execute();
+
+                    $present = $stmt->fetchColumn();
+
+
+
+                    if($present != false)
+                    {
+                        //update
+
+                        $sql = "UPDATE devices set uid='$device_id' WHERE user_id=:user_id and type=:device_type";
+
+                        $stmt = $db->prepare($sql);
+
+                        $stmt->bindParam(":user_id", $data['id']);
+                        $stmt->bindParam(":device_type", $device_type);
+
+                        $stmt->execute();    
+                    }
+                    else
+                    {
+                        //insert
+                        $sql = "insert into devices (user_id,uid,`type`) values (:user_id,:device_id,:device_type)";
+
+                        $stmt = $db->prepare($sql);
+
+                        $stmt->bindParam(":user_id", $data['id']);
+                        $stmt->bindParam(":device_type", $device_type);
+                        $stmt->bindParam(":device_id", $device_id);
+
+                        $stmt->execute();    
+
+                    }   
+                    $response["header"]["error"] = 0;
+                    $response["header"]["message"] = "Success";
+                }
                 elseif($data["password"] == MD5($password) && $data['verified'] == 0)
                 {
                     $response["header"]["error"] = 1;
                     $response["header"]["message"] = "Email address not verified";
                 }    
-	            else
-	            {
-	                $data = array();
-	                $response["header"]["error"] = 1;
-	                $response["header"]["message"] = "Username or password incorrect";    
-	            }
-			}
-			else {
-				$response["header"]["error"] = 0;
-	            $response["header"]["message"] = "Success";
-			}	    
+                else
+                {
+                    $data = array();
+                    $response["header"]["error"] = 1;
+                    $response["header"]["message"] = "Username or password incorrect";    
+                }
+                	    
+            }
+            else
+            {
+                $response["header"]["error"] = 1;
+                $response["header"]["message"] = "User is not signed up";
+            }
+
+
         }
-        else
-        {
+        catch(PDOException $e){
             $response["header"]["error"] = 1;
-            $response["header"]["message"] = "User is not signed up";
+            $response["header"]["message"] = $e->getMessage();
         }
         
-        
-    }
-    catch(PDOException $e){
-        $response["header"]["error"] = 1;
-        $response["header"]["message"] = $e->getMessage();
     }    
     
     $response["body"] = $data;
@@ -309,25 +383,24 @@ function rand_string( $length ) {
 
 function signup() {
 	global $app, $db, $response;
-	$user = array("user_id"=>0);
+	$user = array();
 	
 	$req = $app->request(); // Getting parameter with names
 	$type = $req->params('type'); // Getting parameter with names
-	
+    $first_name = $req->params('first_name'); // Getting parameter with names
+    $last_name = $req->params('last_name'); // Getting parameter with names
+    $username = $req->params('username'); // Getting parameter with names
+    $password = md5($req->params('password')); // Getting parameter with names
+    $company_email= $req->params('company_email');
+    $company_name= $req->params('company_name');
+    $dob= $req->params('dob');
+    $designation= $req->params('designation');
+    $phone= $req->params('phone');
+    $office_no= $req->params('office_no');
+    $user_image = '';
+    
 	if($type == 0)
 	{
-	    $first_name = $req->params('first_name'); // Getting parameter with names
-	    $last_name = $req->params('last_name'); // Getting parameter with names
-	    $username = $req->params('username'); // Getting parameter with names
-	    $password = md5($req->params('password')); // Getting parameter with names
-	    $company_email= $req->params('company_email');
-	    $company_name= $req->params('company_name');
-	    $dob= $req->params('dob');
-	    $designation= $req->params('designation');
-	    $phone= $req->params('phone');
-	    $office_no= $req->params('office_no');
-	    $user_image = '';
-	    
 	    if(userAvailable($username,$type))
 	    {
 	        $sql = "INSERT INTO users (first_name,last_name,username,password,company_email,date_of_birth,designation,phone,office_no,company_name,user_image) 
@@ -370,7 +443,7 @@ function signup() {
 	                $stmt->execute();
 	                
 	                $email_data = array('to'=>$username,'subject'=>'WASL - Please verify your email', 'message'=>'Your verification code is '.substr($password,0,6));
-	                sendEmail($email_data );
+	                //sendEmail($email_data );
 	                
 	                $user["user_id"] = $db->lastInsertId();
 	                $response["body"] = $user;
@@ -399,23 +472,52 @@ function signup() {
 		
 		if(userAvailable($linkedin_id, $type))
 		{
-			$sql = "INSERT INTO users (username,type,linkedin_id,token,verified) 
+            $sql = "INSERT INTO users (first_name,last_name,username,password,company_email,date_of_birth,designation,phone,office_no,company_name,user_image,linkedin_id,token,type,verified) 
 	                values 
-	                (:username,:type,:linkedin_id,:token,:verified)";
+	                (:first_name,:last_name,:username,:password,:company_email,:date_of_birth,:designation,:phone,:office_no,:company_name,:user_image,:linkedin_id,:token,:type,:verified)";
 					
+            if(isset($_FILES['file']))
+            {
+                $uploaddir = 'images/';
+                $file = basename($_FILES['file']['name']);
+                $protocol = stripos($_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://';
+
+                $uploadfile = $uploaddir . $file;
+
+                if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
+                    $user_image = $uploadfile;
+                    $path = substr($_SERVER['REQUEST_URI'],0,stripos($_SERVER['REQUEST_URI'], "index.php"));
+                    $user_image = $protocol.$_SERVER['SERVER_NAME'].$path.$user_image;    
+                } else {
+                    $response["header"]["error"] = 1;
+                    $response["header"]["message"] = 'Some error';
+                }
+            }
+            
 			try{
 					$verified = 1;
 	                $stmt = $db->prepare($sql);  
+                    $stmt->bindParam(":first_name", $first_name);
+                    $stmt->bindParam(":last_name", $last_name);
+                    $stmt->bindParam(":username", $username);
+                    $stmt->bindParam(":password", $password);
+                    $stmt->bindParam(":company_email", $company_email);
+                    $stmt->bindParam(":date_of_birth", $dob);
+                    $stmt->bindParam(":designation", $designation);
+                    $stmt->bindParam(":phone", $phone);
+                    $stmt->bindParam(":office_no", $office_no);
+                    $stmt->bindParam(":company_name", $company_name);
+                    $stmt->bindParam(":user_image", $user_image);
 	                $stmt->bindParam(":linkedin_id", $linkedin_id);
-					$stmt->bindParam(":username", $linkedin_id);
-	                $stmt->bindParam(":token", $token);
+					$stmt->bindParam(":token", $token);
 	                $stmt->bindParam(":type", $type);
 	                $stmt->bindParam(":verified", $verified);
+                    
 					
 	                $stmt->execute();
 	                
 	                
-	                $user["user_id"] = $db->lastInsertId();debug($stmt->errorInfo(),1);
+	                $user["user_id"] = $db->lastInsertId();
 	                $response["body"] = $user;
 	                $response["header"]["error"] = 0;
 	                $response["header"]["message"] = "Success";

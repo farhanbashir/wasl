@@ -15,6 +15,22 @@ CREATE DATABASE /*!32312 IF NOT EXISTS*/`wasl` /*!40100 DEFAULT CHARACTER SET la
 
 USE `wasl`;
 
+/*Table structure for table `business_card` */
+
+DROP TABLE IF EXISTS `business_card`;
+
+CREATE TABLE `business_card` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `from` int(11) DEFAULT NULL,
+  `to` int(11) DEFAULT NULL,
+  `datetime` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;
+
+/*Data for the table `business_card` */
+
+insert  into `business_card`(`id`,`from`,`to`,`datetime`) values (1,1,12,'2014-08-21 10:01:30'),(2,1,13,'2014-08-21 10:01:30'),(3,1,14,'2014-08-21 10:01:30'),(4,1,12,'2014-08-21 10:04:16'),(5,1,13,'2014-08-21 10:04:16'),(6,1,14,'2014-08-21 10:04:16');
+
 /*Table structure for table `devices` */
 
 DROP TABLE IF EXISTS `devices`;
@@ -25,11 +41,11 @@ CREATE TABLE `devices` (
   `uid` varchar(255) DEFAULT NULL,
   `type` tinyint(1) DEFAULT NULL COMMENT '0=iphone,1=android',
   PRIMARY KEY (`device_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
 
 /*Data for the table `devices` */
 
-insert  into `devices`(`device_id`,`user_id`,`uid`,`type`) values (1,372,'321321322121',0),(2,372,'321321322121',1);
+insert  into `devices`(`device_id`,`user_id`,`uid`,`type`) values (1,372,'321321322121',0),(2,372,'373',1),(3,375,'373',1),(4,381,'373',1);
 
 /*Table structure for table `event_statuses` */
 
@@ -132,11 +148,11 @@ CREATE TABLE `notifications` (
   `message` varchar(255) DEFAULT NULL,
   `datetime` datetime DEFAULT NULL,
   PRIMARY KEY (`notification_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=latin1;
 
 /*Data for the table `notifications` */
 
-insert  into `notifications`(`notification_id`,`from`,`to`,`event_id`,`message`,`datetime`) values (3,373,372,5,'joined the event','2014-08-19 11:39:38'),(4,372,373,5,'following the user','2014-08-19 11:45:32');
+insert  into `notifications`(`notification_id`,`from`,`to`,`event_id`,`message`,`datetime`) values (3,373,372,5,'joined the event','2014-08-19 11:39:38'),(4,372,373,5,'following the user','2014-08-19 11:45:32'),(5,1,12,0,'share business card with you','2014-08-21 10:04:16'),(6,1,13,0,'share business card with you','2014-08-21 10:04:16'),(7,1,14,0,'share business card with you','2014-08-21 10:04:16');
 
 /*Table structure for table `user_events` */
 
@@ -184,11 +200,11 @@ CREATE TABLE `users` (
   `token` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=375 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=382 DEFAULT CHARSET=latin1;
 
 /*Data for the table `users` */
 
-insert  into `users`(`id`,`first_name`,`last_name`,`username`,`password`,`gender`,`phone`,`user_image`,`ip_address`,`created`,`modified`,`status`,`type`,`personal_email`,`company_email`,`date_of_birth`,`designation`,`office_no`,`company_name`,`verified`,`linkedin_id`,`token`) values (372,'farhan','bashir','farhan@bashir.com','f4a5666799f91651381ec4396103ad0d',NULL,'','',NULL,NULL,NULL,'active',0,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL),(373,'farhan','bashir','farhan1','f4a5666799f91651381ec4396103ad0d',NULL,'','',NULL,NULL,NULL,'active',0,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL),(374,'farhan','bashir','farhan1@bashir.com','f4a5666799f91651381ec4396103ad0d',NULL,'0345-2534488','images/bayt-logo2-en.png',NULL,NULL,NULL,'active',0,NULL,'fbashir@folio3.com','30-04-1986','sr developer','4133941','folio3',0,NULL,NULL);
+insert  into `users`(`id`,`first_name`,`last_name`,`username`,`password`,`gender`,`phone`,`user_image`,`ip_address`,`created`,`modified`,`status`,`type`,`personal_email`,`company_email`,`date_of_birth`,`designation`,`office_no`,`company_name`,`verified`,`linkedin_id`,`token`) values (372,'farhan','bashir','farhan@bashir.com','f4a5666799f91651381ec4396103ad0d',NULL,'','',NULL,NULL,NULL,'active',0,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL),(373,'farhan','bashir','farhan1','f4a5666799f91651381ec4396103ad0d',NULL,'','',NULL,NULL,NULL,'active',0,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL),(374,'farhan','bashir','farhan1@bashir.com','f4a5666799f91651381ec4396103ad0d',NULL,'0345-2534488','images/bayt-logo2-en.png',NULL,NULL,NULL,'active',0,NULL,'fbashir@folio3.com','30-04-1986','sr developer','4133941','folio3',0,NULL,NULL),(375,'1','','1','1',NULL,'','',NULL,NULL,NULL,'active',1,NULL,NULL,NULL,NULL,NULL,NULL,1,'1','2'),(381,'adnan','bashir','salman@bashir.com','f4a5666799f91651381ec4396103ad0d',NULL,'651667','',NULL,NULL,NULL,'active',1,NULL,'sharff@gmail.com','1986-04-30','chairman','657421','sharff',1,'46','654654asdf');
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;

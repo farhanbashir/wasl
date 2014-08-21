@@ -45,6 +45,7 @@ $app->post('/sendMessage','sendMessage');
 $app->post('/imgSave','imgSave');
 $app->post('/editProfile','editProfile');
 $app->post('/forgotPassword','forgotPassword');
+$app->post('/shareCard','shareCard');
 
 /*
 $app->post("/postStatusOnEvent",'postStatusOnEvent');
@@ -1334,6 +1335,43 @@ function shareStatus()
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
 }    
+
+function shareCard()
+{
+    global $app ,$db, $response;
+    $req = $app->request();
+    $from = $req->params('from');
+    $to = json_decode($req->params('to'),true);
+    
+
+    foreach($to as $t)
+    {    
+        try{
+            $sql = "INSERT INTO business_card (`from`,`to`,datetime) values (:from,:to,:datetime)";
+            $stmt = $db->prepare($sql);
+            $date = date("Y-m-d h:i:s");
+            $stmt->bindParam("from", $from);
+            $stmt->bindParam("to", $t);
+            $stmt->bindParam("datetime", $date);
+            $stmt->execute();
+            
+            $notification_data = array("from"=>$from,"to"=>$t ,"message"=>"share business card with you","event_id"=>0);
+            insertNotification($notification_data);
+            
+            $response["header"]["error"] = 0;
+            $response["header"]["message"] = "Success";    
+
+        }
+        catch(PDOException $e){
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = $e->getMessage();
+        }
+    }    
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}    
+
 
 
 function checkedInThisEvent()

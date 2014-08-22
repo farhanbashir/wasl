@@ -1179,23 +1179,23 @@ function searchEventByName($search,$user_id)
                         $following_users_ids[] = $following_user['id'];
                     }    
 
-                    foreach($users_list as $key=>$val)
+                    foreach($event_users as $key=>$val)
                     {
-                        if(in_array($users_list[$key]['id'],$following_users_ids))
+                        if(in_array($event_users[$key]['id'],$following_users_ids))
                         {
-                            $users_list[$key]['is_followed'] = true;
+                            $event_users[$key]['is_followed'] = true;
                         }
                         else
                         {
-                            $users_list[$key]['is_followed'] = false;
+                            $event_users[$key]['is_followed'] = false;
                         }    
                     }    
                 }
                 else
                 {
-                    foreach($users_list as $key=>$val)
+                    foreach($event_users as $key=>$val)
                     {
-                        $users_list[$key]['is_followed'] = false;
+                        $event_users[$key]['is_followed'] = false;
                     }
                 }
                 

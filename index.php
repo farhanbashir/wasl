@@ -978,7 +978,7 @@ function getFollower($user_id)
         
         $response["header"]["error"] = 0;
         $response["header"]["message"] = 'Success';
-        $response["header"]["body"] = $users_list;
+        $response["body"] = $users_list;
         
     }
     catch(PDOException $e){
@@ -1059,7 +1059,7 @@ function getFollowing($user_id)
         
         $response["header"]["error"] = 0;
         $response["header"]["message"] = 'Success';
-        $response["header"]["body"] = $users_list;
+        $response["body"] = $users_list;
         
     }
     catch(PDOException $e){

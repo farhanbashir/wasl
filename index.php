@@ -20,7 +20,7 @@ $app = new \Slim\Slim(array("MODE" => "development"));
 $response = array();
 
 $app->get('/users','getUsers');
-$app->get("/getProfile/:username",'getProfile');
+$app->get("/getProfile/:id",'getProfile');
 $app->get("/getMyEvents/:params+",'getMyEvents');
 $app->get("/getEvent/:params+",'getEvent');
 $app->get("/getEventUserList/:eventid/:user_id",'getEventUserList');
@@ -128,7 +128,7 @@ echo "here";die;
         //echo $result;
     }
 
-function getProfile($username){
+function getProfile($user_id){
 	global $app,$db;
     $info = array();
     
@@ -137,10 +137,10 @@ function getProfile($username){
             (select count(*) from user_events where user_id=u.id and is_checkedIn=1) as checkins,
             (select count(*) from followers where user_id=u.id) as follower,
             (select count(*) from followers where follower_id=u.id) as following,
-            u.* FROM users u where u.username=:username";
+            u.* FROM users u where u.id=:id";
     try{
         $stmt = $db->prepare($sql);  
-        $stmt->bindParam("username", $username);
+        $stmt->bindParam(":id", $id);
         $stmt->execute();
         //$stmt   = $db->query($sql);
         $info  = $stmt->fetch(PDO::FETCH_NAMED);

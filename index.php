@@ -140,7 +140,7 @@ function getProfile($user_id){
             u.* FROM users u where u.id=:id";
     try{
         $stmt = $db->prepare($sql);  
-        $stmt->bindParam(":id", $id);
+        $stmt->bindParam(":id", $user_id);
         $stmt->execute();
         //$stmt   = $db->query($sql);
         $info  = $stmt->fetch(PDO::FETCH_NAMED);
@@ -1277,7 +1277,7 @@ function searchEventByLocation($latitude,$longitude,$user_id)
                 }
                 else
                 {
-                    foreach($users_list as $key=>$val)
+                    foreach($event_users as $key=>$val)
                     {
                         $event_users[$key]['is_followed'] = false;
                     }

@@ -20,7 +20,7 @@ $app = new \Slim\Slim(array("MODE" => "development"));
 $response = array();
 
 $app->get('/users','getUsers');
-$app->get("/getProfile/:id",'getProfile');
+$app->get("/getProfile/:params+",'getProfile');
 $app->get("/getMyEvents/:params+",'getMyEvents');
 $app->get("/getEvent/:params+",'getEvent');
 $app->get("/getEventUserList/:eventid/:user_id",'getEventUserList');
@@ -128,9 +128,17 @@ echo "here";die;
         //echo $result;
     }
 
-function getProfile($user_id){
+function getProfile($params){
 	global $app,$db;
     $info = array();
+    $user_id = "";
+    
+    $target_id = $params[0];
+    
+    if(count($params) > 1)
+    {
+        $user_id = $params[1];
+    }    
     
 //    $sql = "SELECT (select count(*) from user_events where user_id=u.id and is_checkedIn=1) as checkins,u.* FROM users u where u.username=:username ";
     $sql = "SELECT 
@@ -140,13 +148,63 @@ function getProfile($user_id){
             u.* FROM users u where u.id=:id";
     try{
         $stmt = $db->prepare($sql);  
-        $stmt->bindParam(":id", $user_id);
+        $stmt->bindParam(":id", $target_id);
         $stmt->execute();
         //$stmt   = $db->query($sql);
         $info  = $stmt->fetch(PDO::FETCH_NAMED);
         
         if(is_array($info))
         {
+            if($user_id != "")
+            {
+                $following = getFollowingInternal($user_id);
+                if(count($following) > 0)
+                {
+                    foreach($following as $follow)
+                    {
+                        if($follow['id'] == $target_id)
+                        {
+                            $info['is_followed'] = true;
+                            break;
+                        }    
+                    }
+                    
+                    if(!isset($info['is_followed']))
+                    {
+                        $info['is_followed'] = false;
+                    }    
+                }
+                else
+                {
+                    $info['is_followed'] = false;
+                }   
+                
+                $followers = getFollowerInternal($user_id);
+                if(count($followers) > 0)
+                {
+                    foreach($followers as $follow)
+                    {
+                        if($follow['id'] == $target_id)
+                        {
+                            $info['is_follower'] = true;
+                            break;
+                        }    
+                    }
+                    
+                    if(!isset($info['is_follower']))
+                    {
+                        $info['is_follower'] = false;
+                    }
+                }
+                else
+                {
+                    $info['is_follower'] = false;
+                }    
+                
+            }    
+            
+            
+            
             $response["header"]["error"] = 0;
             $response["header"]["message"] = "Success";
             $response["body"] = $info;    
@@ -774,35 +832,13 @@ function getMyEvents($params)
                	 // $event_users = getUsersList($event['id']);
                 $users_list = getUserListArray($event['id']); 
                 $following_users = getFollowingInternal($user_id);
-
-                if(count($following_users) > 0)
-                {
-                    $following_users_ids = array();
-                    foreach($following_users as $following_user)
-                    {
-                        $following_users_ids[] = $following_user['id'];
-                    }    
-
-                    foreach($users_list as $key=>$val)
-                    {
-                        if(in_array($users_list[$key]['id'],$following_users_ids))
-                        {
-                            $users_list[$key]['is_followed'] = true;
-                        }
-                        else
-                        {
-                            $users_list[$key]['is_followed'] = false;
-                        }    
-                    }    
-                }
-                else
-                {
-                    foreach($users_list as $key=>$val)
-                    {
-                        $users_list[$key]['is_followed'] = false;
-                    }
-                }
-                  
+                $follower_users = getFollowerInternal($user_id);
+                
+                
+                $users_list = getIsFollowed($users_list, $following_users);
+                
+                $users_list = getIsFollower($users_list, $following_users);
+                
                 /*
                   
                   $event_id = $event['id'];
@@ -861,34 +897,9 @@ function getEvent($params)
                 {
                     $user_id = $params[1];
                     $following_users = getFollowingInternal($user_id);
+                    $users_list = getIsFollowed($users_list, $following_users);
                     
-                    if(count($following_users) > 0)
-                    {
-                        $following_users_ids = array();
-                        foreach($following_users as $following_user)
-                        {
-                            $following_users_ids[] = $following_user['id'];
-                        }    
-                        
-                        foreach($users_list as $key=>$val)
-                        {
-                            if(in_array($users_list[$key]['id'],$following_users_ids))
-                            {
-                                $users_list[$key]['is_followed'] = true;
-                            }
-                            else
-                            {
-                                $users_list[$key]['is_followed'] = false;
-                            }    
-                        }    
-                    }
-                    else
-                    {
-                        foreach($users_list as $key=>$val)
-                        {
-                            $users_list[$key]['is_followed'] = false;
-                        }
-                    }    
+                    $users_list = getIsFollower($users_list, $following_users);
                     
                 }    
                 
@@ -991,6 +1002,33 @@ function getFollower($user_id)
     echo json_encode($response);
 }
 
+function getFollowerInternal($user_id)
+{
+    global $app,$db,$response;
+    
+    $sql = "select u.* from followers f
+            inner join users u on u.id=f.follower_id
+            where user_id=$user_id";
+
+
+    try{
+        $stmt   = $db->query($sql);
+        $users_list  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        
+        return $users_list;
+        
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+        
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}
+
+
 function getMessages($user_id)
 {
     global $app,$db,$response;
@@ -1082,6 +1120,20 @@ function getEventUserList($event_id,$user_id)
     
     $following_users = getFollowingInternal($user_id);
 
+    $users_list = getIsFollowed($users_list, $following_users);
+    
+    $users_list = getIsFollower($users_list, $following_users);
+    
+    
+    
+	$app->response()->header("Content-Type", "application/json");
+    echo json_encode($users_list);
+    
+    
+}    
+
+function getIsFollowed($users_list, $following_users)
+{
     if(count($following_users) > 0)
     {
         $following_users_ids = array();
@@ -1110,11 +1162,42 @@ function getEventUserList($event_id,$user_id)
         }
     }
     
-	$app->response()->header("Content-Type", "application/json");
-    echo json_encode($users_list);
-    
-    
+    return $users_list;
 }    
+
+function getIsFollower($users_list, $follower_users)
+{
+    if(count($follower_users) > 0)
+    {
+        $follower_users_ids = array();
+        foreach($follower_users as $follower_user)
+        {
+            $follower_users_ids[] = $follower_user['id'];
+        }    
+
+        foreach($users_list as $key=>$val)
+        {
+            if(in_array($users_list[$key]['id'],$follower_users_ids))
+            {
+                $users_list[$key]['is_follower'] = true;
+            }
+            else
+            {
+                $users_list[$key]['is_follower'] = false;
+            }    
+        }    
+    }
+    else
+    {
+        foreach($users_list as $key=>$val)
+        {
+            $users_list[$key]['is_follower'] = false;
+        }
+    }
+    
+    return $users_list;
+}    
+
 
 function getEventFeedByEventId( $event_id)
 {
@@ -1171,33 +1254,9 @@ function searchEventByName($search,$user_id)
                 
                 $following_users = getFollowingInternal($user_id);
 
-                if(count($following_users) > 0)
-                {
-                    $following_users_ids = array();
-                    foreach($following_users as $following_user)
-                    {
-                        $following_users_ids[] = $following_user['id'];
-                    }    
-
-                    foreach($event_users as $key=>$val)
-                    {
-                        if(in_array($event_users[$key]['id'],$following_users_ids))
-                        {
-                            $event_users[$key]['is_followed'] = true;
-                        }
-                        else
-                        {
-                            $event_users[$key]['is_followed'] = false;
-                        }    
-                    }    
-                }
-                else
-                {
-                    foreach($event_users as $key=>$val)
-                    {
-                        $event_users[$key]['is_followed'] = false;
-                    }
-                }
+                $event_users = getIsFollowed($event_users, $following_users);
+                
+                $event_users = getIsFollower($event_users, $following_users);
                 
                 if(count($event_users) > 0)
                 {
@@ -1255,33 +1314,9 @@ function searchEventByLocation($latitude,$longitude,$user_id)
                 
                 $following_users = getFollowingInternal($user_id);
 
-                if(count($following_users) > 0)
-                {
-                    $following_users_ids = array();
-                    foreach($following_users as $following_user)
-                    {
-                        $following_users_ids[] = $following_user['id'];
-                    }    
-
-                    foreach($event_users as $key=>$val)
-                    {
-                        if(in_array($event_users[$key]['id'],$following_users_ids))
-                        {
-                            $event_users[$key]['is_followed'] = true;
-                        }
-                        else
-                        {
-                            $event_users[$key]['is_followed'] = false;
-                        }    
-                    }    
-                }
-                else
-                {
-                    foreach($event_users as $key=>$val)
-                    {
-                        $event_users[$key]['is_followed'] = false;
-                    }
-                }
+                $event_users = getIsFollowed($event_users, $following_users);
+                
+                $event_users = getIsFollower($event_users, $following_users);
                 
                 if(count($event_users) > 0)
                 {

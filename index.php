@@ -54,10 +54,28 @@ $app->post("/postStatusOnEvent",'postStatusOnEvent');
 
 function test()
 {
+    $devices = get_user_device_id(373);
+    debug($devices,1);
     
-	$data = array("from"=>372,"to"=>373,"message"=>"aby o");
+	//$data = array("from"=>372,"to"=>373,"message"=>"aby o");
     //insertNotification($data);
 }
+
+function get_user_device_id($user_id)
+{
+    global $db,$app,$response;
+    
+    $sql = "SELECT * FROM devices WHERE user_id=$user_id";
+    
+    try{
+        $stmt   = $db->query($sql);
+        $users  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        return $users;
+    }
+    catch(PDOException $e){
+        return false;
+    }
+}    
 
 function getUsers()
 {
@@ -88,7 +106,7 @@ function getUsers()
 }
 
 function send_notification_android($registatoin_ids, $message) {
-echo "here";die;
+global $config;
         // Set POST variables
         $url = 'https://android.googleapis.com/gcm/send';
 
@@ -99,7 +117,7 @@ echo "here";die;
 		
 		//print_r($fields);die;
         $headers = array(
-            'Authorization: key=' . self::GOOGLE_API_KEY,
+            'Authorization: key=' . $config['google_key'],
             'Content-Type: application/json'
         );
         // Open connection
@@ -431,6 +449,26 @@ function insertNotification($data)
     $stmt->bindParam(":datetime", $datetime);
     $stmt->bindParam(":event_id", $event_id);
     $stmt->execute();
+    
+    $devices = get_user_device_id($to);
+    
+    if($devices != false)
+    {
+        foreach($devices as $device)
+        {
+            if($device['type'] == 0)
+            {
+                //iphone notification here
+            }
+            else
+            {
+                //android notification here
+                send_notification_android(array($device['uid']), $message)
+            }    
+        }
+    }    
+        
+    
     
 }    
 

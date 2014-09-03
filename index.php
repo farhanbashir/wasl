@@ -54,8 +54,9 @@ $app->post("/postStatusOnEvent",'postStatusOnEvent');
 
 function test()
 {
-    $devices = get_user_device_id(373);
-    debug($devices,1);
+debug($_SERVER['DOCUMENT_ROOT']);
+    //$devices = get_user_device_id(373);
+    //debug($devices,1);
     
 	//$data = array("from"=>372,"to"=>373,"message"=>"aby o");
     //insertNotification($data);
@@ -105,10 +106,73 @@ function getUsers()
 	
 }
 
+function send_notification_iphone($deviceToken, $message, $sound='default')
+{
+	global $config;
+	$socketClient = ""; 
+
+	/*
+	init work
+	*/
+	$certificateFilename ="ck.pem";
+	//$certificateFilename =env('DOCUMENT_ROOT').''. Router::url('/') . "app/Lib/PushNotification/apns-dist.pem";
+	
+	//echo $certificateFilename;
+	//exit;
+	
+	$ctx = stream_context_create();
+	stream_context_set_option($ctx, 'ssl', 'local_cert', $certificateFilename);
+	stream_context_set_option($ctx, 'ssl', 'passphrase', $config['PASS_PHRASE']);
+
+	// Open a connection to the APNS server
+	$fp = stream_socket_client($config['REMOTE_SOCKET_APPLE'], $err, $errstr, 60, STREAM_CLIENT_CONNECT | STREAM_CLIENT_PERSISTENT, $ctx);
+
+	if (!$fp) 
+	{
+		$fp = (array("code"=>1, "message"=>"Failed to connect: $err $errstr" . PHP_EOL));
+	}
+	
+	/*
+	init work
+	*/	
+
+	
+	if (is_array($fp)) {
+		//CakeLog::write('debug', 'Couldn\'t connect to socket client' . PHP_EOL . print_r($socketClient));
+		return ; 
+	}
+	
+	// Create the payload body
+	$body['aps'] = array(
+		'alert' => $message,
+		'sound' => $sound
+	);
+
+	// Encode the payload as JSON
+	$payload = json_encode($body);
+
+	// Build the binary notification
+	$msg = chr(0) . pack('n', 32) . pack('H*', $deviceToken) . pack('n', strlen($payload)) . $payload;
+
+	// Send it to the server
+	$result = fwrite($socketClient, $msg, 8192);
+	fclose($socketClient);
+	//self::abort($socketClient);
+
+	if (!$result) {
+		//CakeLog::write('debug', 'Error Code 2: Message not delivered' . PHP_EOL);
+		return 2;
+	}
+	else {
+		//CakeLog::write('debug', 'Message successfully delivered' . PHP_EOL);
+		return 0;
+	}
+}
+
 function send_notification_android($registatoin_ids, $message) {
 global $config;
         // Set POST variables
-        $url = 'https://android.googleapis.com/gcm/send';
+        $url = $config["REMOTE_SOCKET_GOOGLE"];
 
         $fields = array(
             'registration_ids' => $registatoin_ids,
@@ -459,11 +523,12 @@ function insertNotification($data)
             if($device['type'] == 0)
             {
                 //iphone notification here
+				send_notification_iphone($device['uid'],$message);
             }
             else
             {
                 //android notification here
-                send_notification_android(array($device['uid']), $message)
+                send_notification_android(array($device['uid']), $message);
             }    
         }
     }    

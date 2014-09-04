@@ -514,7 +514,7 @@ function insertNotification($data)
     $stmt->bindParam(":event_id", $event_id);
     $stmt->execute();
     
-    $devices = get_user_device_id($to);
+    /*$devices = get_user_device_id($to);
     
     if($devices != false)
     {
@@ -531,7 +531,7 @@ function insertNotification($data)
                 send_notification_android(array($device['uid']), $message);
             }    
         }
-    }    
+    }*/    
         
     
     
@@ -886,7 +886,7 @@ function getMyNotifications($user_id)
 {
     global $app,$db,$response;
     
-    $sql = "select u.first_name as from_name,n.* from notifications n 
+    $sql = "select u.user_image as image,u.first_name as from_name,n.* from notifications n 
             inner join users u on u.id = n.from 
             where `to` = $user_id ";
     
@@ -1136,7 +1136,7 @@ function getMessages($user_id)
 {
     global $app,$db,$response;
     
-    $sql = "select m.*,u.first_name,u.last_name,u.username,u.designation from messages m 
+    $sql = "select m.*,u.first_name,u.last_name,u.username,u.designation,u.user_image as image from messages m 
             inner join users u on u.id=m.from 
             where m.to=$user_id";
 
@@ -1594,16 +1594,17 @@ function shareStatus()
     $event_id = $req->params('event_id');
     $user_id = $req->params('user_id');
     $status = $req->params('status');
+    $datetime = $req->params('datetime');
     
     
     try{
         $sql = "INSERT INTO event_statuses (user_id,event_id,status,datetime) values (:user_id,:event_id,:status,:datetime)";
             $stmt = $db->prepare($sql);
-            $date = date("Y-m-d h:i:s");
+            //$date = date("Y-m-d h:i:s");
             $stmt->bindParam("user_id", $user_id);
             $stmt->bindParam("event_id", $event_id);
             $stmt->bindParam("status", $status);
-            $stmt->bindParam("datetime", $date);
+            $stmt->bindParam("datetime", $datetime);
             $stmt->execute();
             $response["header"]["error"] = 0;
             $response["header"]["message"] = "Success";    

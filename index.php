@@ -51,6 +51,7 @@ $app->post('/shareCard','shareCard');
 $app->post('/userLocation','userLocation');
 $app->post('/updateEvent','updateEvent');
 $app->post('/deleteEvent','deleteEvent');
+$app->post('/reportEvent','reportEvent');
 /*
 $app->post("/postStatusOnEvent",'postStatusOnEvent');
 */
@@ -1915,6 +1916,52 @@ function deleteEvent()
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
 }
+
+function reportEvent()
+{
+    global $app ,$db, $response;
+    $req = $app->request();
+    $event_id = $req->params('event_id');
+    $user_id = $req->params('user_id');
+    $report_text = $req->params('report_text');
+
+
+    $sql = "SELECT * FROM events WHERE id=$event_id";
+
+    try{
+        $stmt   = $db->query($sql);
+        $event_exist  = $stmt->fetch(PDO::FETCH_NAMED);
+
+        if(is_array($event_exist))
+        {
+            $sql = "INSERT INTO reports (user_id,event_id,text) values (:user_id,:event_id,:report_text)";
+            $stmt = $db->prepare($sql);
+
+            $stmt->bindParam("user_id", $user_id);
+            $stmt->bindParam("event_id", $event_id);
+            $stmt->bindParam("report_text", $report_text);
+            $stmt->execute();
+
+            $response["header"]["error"] = 0;
+            $response["header"]["message"] = "Success";
+
+        }
+        else
+        {
+            $response["header"]["error"] = 1;
+            $response["header"]["message"] = 'Event do not exist';
+        }
+
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}
+
 
 function shareStatus()
 {

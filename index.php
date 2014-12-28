@@ -28,8 +28,8 @@ $app->get("/getEventFeedByEventId/:eventid",'getEventFeedByEventId');
 $app->get("/getFollower/:user_id",'getFollower');
 $app->get("/getMessages/:user_id",'getMessages');
 $app->get("/getFollowing/:user_id",'getFollowing');
-$app->get("/searchEventByName/:search/:user_id",'searchEventByName');
-$app->get("/searchEventByLocation/:latitude/:longitude/:user_id",'searchEventByLocation');
+$app->get("/searchEventByName/:search/:user_id/:page",'searchEventByName');
+$app->get("/searchEventByLocation/:latitude/:longitude/:user_id/:page",'searchEventByLocation');
 $app->get("/getNearByUser/:latitude/:longitude",'getNearByUser');
 $app->get("/test1","test1");
 $app->get("/verify/:email/:code",'verify');
@@ -1007,16 +1007,25 @@ function getMyEvents($params)
     $sql = "SELECT e.* FROM events e INNER JOIN user_events ue ON e.id=ue.event_id WHERE ue.user_id=$user_id and e.is_active=1";
 
     $event_id = "";
+    $rec_limit = 10;
+    $limit = "";
 
     if(count($params) > 1)
     {
-        $event_id = $params[1];
+        if($params[1] != 0)
+        {
+            $event_id = $params[1];
+            $sql .= " AND e.id=$event_id";
+        }
+        elseif(isset($params[2]) && $params[2] > 0)
+        {
+            $page = ($params[2] == 1) ? 0 : (($params[2] -1) * $rec_limit);
+            $sql .= " LIMIT $page,$rec_limit";
+        }
+
     }
 
-    if($event_id != "")
-    {
-        $sql .= " AND e.id=$event_id";
-    }
+
 
     try{
         $stmt   = $db->query($sql);
@@ -1075,7 +1084,7 @@ function getMyEvents($params)
 function getEvent($params)
 {
     global $app, $db, $response;
-
+debug($params,1);
     $event_id = $params[0];
 
     $sql = "SELECT e.* FROM events e WHERE e.id=$event_id and e.is_active=1";
@@ -1430,13 +1439,16 @@ function getEventFeedByEventId( $event_id)
 }
 
 
-function searchEventByName($search,$user_id)
+function searchEventByName($search,$user_id,$page)
 {
     global $app, $db, $response;
 
     $search  = $search."*";
+    $rec_limit = 10;
+    $start = ($page > 1) ? (($page -1) * $rec_limit) : 0;
 
-    $sql = "SELECT * FROM events WHERE MATCH (name, description) AGAINST ('$search' IN BOOLEAN MODE) and is_active=1";
+
+    $sql = "SELECT * FROM events WHERE MATCH (name, description) AGAINST ('$search' IN BOOLEAN MODE) and is_active=1 LIMIT $start,$rec_limit";
 
 
     try{
@@ -1517,10 +1529,12 @@ function IsUserNearbyEvent($latitude,$longitude,$event_id)
     }
 }
 
-function searchEventByLocation($latitude,$longitude,$user_id)
+function searchEventByLocation($latitude,$longitude,$user_id,$page)
 {
     global $app, $db, $response;
 
+    $rec_limit = 10;
+    $start = ($page > 1) ? (($page -1) * $rec_limit) : 0;
 
     $sql = "SELECT *,
             ( 6371 *
@@ -1532,9 +1546,9 @@ function searchEventByLocation($latitude,$longitude,$user_id)
               ) AS distance
             FROM `events`
 			WHERE is_active=1
-            HAVING distance < 25
-            ORDER BY distance";
-
+            HAVING distance < 250
+            ORDER BY distance LIMIT $start,$rec_limit";
+debug($sql,1);
 
     try{
         $stmt   = $db->query($sql);

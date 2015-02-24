@@ -59,25 +59,27 @@ $app->post("/postStatusOnEvent",'postStatusOnEvent');
 function test1()
 {
 
-    $devices = get_user_device_id(372);
+    // $devices = get_user_device_id(372);
 
-    if($devices != false)
-    {
-        foreach($devices as $device)
-        {
-            if($device['type'] == 0)
-            {
+    // if($devices != false)
+    // {
+    //     foreach($devices as $device)
+    //     {
+    //         if($device['type'] == 0)
+    //         {
 
-                //iphone notification here
-				send_notification_iphone($device['uid'],'testing');
-            }
-            else
-            {
-                //android notification here
-                send_notification_android(array($device['uid']), $message);
-            }
-        }
-    }
+    //             //iphone notification here
+				// send_notification_iphone($device['uid'],'testing');
+    //         }
+    //         else
+    //         {
+    //             //android notification here
+    //             send_notification_android(array($device['uid']), $message);
+    //         }
+    //     }
+    // }
+    $data = array('to'=>'farhan.bashir2002@gmail.com','subject'=>'wasl is good','message'=>'hello farhan');
+    sendEmail($data);
 }
 
 function get_user_device_id($user_id)
@@ -821,6 +823,23 @@ function editProfile() {
 
     if(!$useravailable)
     {
+        if(isset($_FILES['file']))
+        {
+            $uploaddir = 'images/';
+            $file = basename($_FILES['file']['name']);
+            $protocol = stripos($_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://';
+
+            $uploadfile = $uploaddir . $file;
+
+            if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
+                $user_image = $uploadfile;
+                $path = substr($_SERVER['REQUEST_URI'],0,stripos($_SERVER['REQUEST_URI'], "index.php"));
+                $user_image = $protocol.$_SERVER['SERVER_NAME'].$path.$user_image;
+            } else {
+                $response["header"]["error"] = 1;
+                $response["header"]["message"] = 'Some error';
+            }
+        }
 
     	 if($user_image){
    	 	 	 $userImageText = "user_image=:user_image,";
@@ -841,24 +860,6 @@ function editProfile() {
                 ".$userImageText."
                 modified=:modified
                 WHERE id=:user_id";
-
-        if(isset($_FILES['file']))
-        {
-            $uploaddir = 'images/';
-            $file = basename($_FILES['file']['name']);
-            $protocol = stripos($_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://';
-
-            $uploadfile = $uploaddir . $file;
-
-            if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)) {
-                $user_image = $uploadfile;
-                $path = substr($_SERVER['REQUEST_URI'],0,stripos($_SERVER['REQUEST_URI'], "index.php"));
-                $user_image = $protocol.$_SERVER['SERVER_NAME'].$path.$user_image;
-            } else {
-                $response["header"]["error"] = 1;
-                $response["header"]["message"] = 'Some error';
-            }
-        }
 
         if(count($response) == 0)
         {
@@ -1084,7 +1085,7 @@ function getMyEvents($params)
 function getEvent($params)
 {
     global $app, $db, $response;
-debug($params,1);
+
     $event_id = $params[0];
 
     $sql = "SELECT e.* FROM events e WHERE e.id=$event_id and e.is_active=1";
@@ -1546,9 +1547,10 @@ function searchEventByLocation($latitude,$longitude,$user_id,$page)
               ) AS distance
             FROM `events`
 			WHERE is_active=1
+            AND if(end_date != '',end_date,start_date) >=now()
             HAVING distance < 250
             ORDER BY distance LIMIT $start,$rec_limit";
-debug($sql,1);
+
 
     try{
         $stmt   = $db->query($sql);
@@ -1667,7 +1669,14 @@ function joinThisEvent()
             $stmt   = $db->query($sql);
             $event  = $stmt->fetch(PDO::FETCH_NAMED);
 
-            $notification_data = array("from"=>$user_id,"to"=>$event['user_id'] ,"message"=>"joined the event","event_id"=>$event_id);
+            $sql = "SELECT * FROM users WHERE id=$user_id";
+            $stmt   = $db->query($sql);
+            $user  = $stmt->fetch(PDO::FETCH_NAMED);
+
+            $name = ucfirst($user['first_name'].' '.$user['last_name']);
+            $message = $name." joined the event.";
+
+            $notification_data = array("from"=>$user_id,"to"=>$event['user_id'] ,"message"=> $message,"event_id"=>$event_id);
             insertNotification($notification_data);
 
             $response["header"]["error"] = 0;
@@ -1957,7 +1966,7 @@ function reportEvent()
             $stmt->execute();
 
             $response["header"]["error"] = 0;
-            $response["header"]["message"] = "Success";
+            $response["header"]["message"] = "Successfully submitted";
 
         }
         else
@@ -2052,7 +2061,7 @@ function userLocation()
 
         $stmt->execute();
      }
-     catch(PDOException $e){debug($e,1);
+     catch(PDOException $e){
             $response["header"]["error"] = 1;
             $response["header"]["message"] = $e->getMessage();
         }
@@ -2084,7 +2093,14 @@ function shareCard()
             $stmt->bindParam("datetime", $date);
             $stmt->execute();
 
-            $notification_data = array("from"=>$from,"to"=>$t ,"message"=>"share business card with you","event_id"=>0);
+            $sql = "SELECT * FROM users WHERE id=$from";
+            $stmt   = $db->query($sql);
+            $user  = $stmt->fetch(PDO::FETCH_NAMED);
+
+            $name = ucfirst($user['first_name'].' '.$user['last_name']);
+            $message = $name." share business card with you.";
+
+            $notification_data = array("from"=>$from,"to"=>$t ,"message"=>$message,"event_id"=>0);
             insertNotification($notification_data);
 
             $response["header"]["error"] = 0;
@@ -2143,7 +2159,7 @@ function checkedInThisEvent()
                 else
                 {
                     $response["header"]["error"] = 1;
-                    $response["header"]["message"] = 'You can not checked in this event';
+                    $response["header"]["message"] = 'You can not check in this event!';
                 }
 
             }
@@ -2190,7 +2206,14 @@ function followUser()
             $stmt->bindParam(":event_id", $event_id);
             $stmt->execute();
 
-            $notification_data = array("from"=>$follower_id,"to"=>$user_id ,"message"=>" is following you.","event_id"=>$event_id);
+            $sql = "SELECT * FROM users WHERE id=$follower_id";
+            $stmt   = $db->query($sql);
+            $user  = $stmt->fetch(PDO::FETCH_NAMED);
+
+            $name = ucfirst($user['first_name'].' '.$user['last_name']);
+            $message = $name." is following you.";
+
+            $notification_data = array("from"=>$follower_id,"to"=>$user_id ,"message"=>$message,"event_id"=>$event_id);
             insertNotification($notification_data);
 
             $response["header"]["error"] = 0;
@@ -2308,8 +2331,9 @@ function sendEmail($data)
     $to = $data['to'];
     $subject = $data['subject'];
     $message = $data['message'];
+    $headers = "From: support@waslevents.com" . "\r\n";
 
-    mail($to, $subject, $message);
+    mail($to, $subject, $message,$headers);
 }
 
 function verify($email,$code)

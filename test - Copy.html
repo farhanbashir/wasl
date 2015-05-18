@@ -1,0 +1,21 @@
+<script src="http://code.jquery.com/jquery-1.10.2.js"></script>
+<script>
+$(document).ready(function(){
+    var data = {};
+    data.user_id = 373;
+    data.event_id = 12;
+    
+    $.ajax({
+        type: "POST",
+        url: 'http://localhost/wasl/index.php/imgSend',
+        data: data,
+        beforeSend: function (xhr){ 
+            xhr.setRequestHeader('token', "farhan"); 
+        },
+        success: function(data){
+            console.log(data);
+        }
+        //dataType: dataType
+    });
+});
+</script>

@@ -20,6 +20,26 @@ $app = new \Slim\Slim(array("MODE" => "development"));
 $response = array();
 
 $app->get('/users','getUsers');
+
+/*** Start User interest & event interests ****/
+
+$app->get('/getinterest','getInterest');
+
+$app->get('/getEventInterests/:event_id','getEventInterests');
+
+$app->get('/getUserInterests/:user_id','getUserInterests');
+
+// add user interest
+$app->post('/addUpdateUserInterests','addUserInterests');
+
+// delete user interest
+//$app->get('/deleteUserInterests','deleteUserInterests');
+
+// add event interest
+$app->post('/addUpdateEventInterests','addUpdateEventInterests');
+
+/****  End interest section ****/
+
 $app->get("/getProfile/:params+",'getProfile');
 $app->get("/getMyEvents/:params+",'getMyEvents');
 $app->get("/getEvent/:params+",'getEvent');
@@ -97,6 +117,213 @@ function get_user_device_id($user_id)
         return false;
     }
 }
+
+
+
+function getInterest()
+{
+	global $app ,$db, $response;
+	$users = array();
+
+    $sql = "SELECT * FROM interests where status=1";
+
+    try{
+        $stmt   = $db->query($sql);
+        $users  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = "Success";
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+
+
+    $response["body"] = $users;
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+
+}
+
+function getUserInterests($user_id)
+{
+	global $app ,$db, $response;
+	$users = array();
+
+     $sql = "SELECT i.id,i.name,i.status 
+			FROM  `user_interests` eui,  `interests` i
+			WHERE i.id = eui.interest_id
+			AND eui.user_id =".$user_id;
+
+    try{
+        $stmt   = $db->query($sql);
+        $users  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = "Success";
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+
+
+    $response["body"] = $users;
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+
+
+}
+
+
+
+function getEventInterests($event_id)
+{
+	global $app ,$db, $response;
+	$users = array();
+
+     $sql = "SELECT * FROM `event_interests` eui , `interests` i where i.id = eui.event_id and eui.event_id = ".$event_id." and i.status=1 ";
+
+    try{
+        $stmt   = $db->query($sql);
+        $users  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        $response["header"]["error"] = 0;
+        $response["header"]["message"] = "Success";
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+
+
+    $response["body"] = $users;
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+
+
+}
+
+
+function addUserInterests()
+{
+    global $app ,$db, $response;
+    $req = $app->request();
+    
+    $user_id = $req->params('user_id');
+    $interests = json_decode($req->params('interest_ids'));
+		
+    $interest_ids = "";
+    try{
+           
+           	foreach($interests as $interest_id){
+    
+ 			  $interest_ids = $interest_ids.$interest_id.",";
+
+     		  $sql = "SELECT * FROM user_interests WHERE user_id=$user_id AND interest_id=$interest_id";
+	   	      $stmt   = $db->query($sql);
+        	  $alreadyInterested  = $stmt->fetchColumn();
+
+			  if($alreadyInterested == 0){
+
+				$sql = "INSERT INTO user_interests (user_id,interest_id,datetime) values (:user_id,:interest_id,:datetime)";
+				$stmt = $db->prepare($sql);
+				$date = date("Y-m-d h:i:s");
+				$stmt->bindParam("user_id", $user_id);
+				$stmt->bindParam("interest_id", $interest_id);
+				$stmt->bindParam("datetime", $date);
+				$stmt->execute();
+
+				}
+            
+            }
+
+			$sql = "DELETE FROM user_interests WHERE user_id=$user_id AND INTEREST_ID NOT IN (".rtrim($interest_ids,",").")";
+			$stmt   = $db->query($sql);
+			$stmt->execute();
+  			/*          
+            $sql = "SELECT * FROM events WHERE id=$event_id";
+            $stmt   = $db->query($sql);
+            $event  = $stmt->fetch(PDO::FETCH_NAMED);
+
+            $sql = "SELECT * FROM users WHERE id=$user_id";
+            $stmt   = $db->query($sql);
+            $user  = $stmt->fetch(PDO::FETCH_NAMED);
+			*/	
+ 				
+            $response["header"]["error"] = 0;
+            $response["header"]["message"] = "Success";
+        
+
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}
+
+function addUpdateEventInterests()
+{
+    global $app ,$db, $response;
+    $req = $app->request();
+    
+    $user_id = $req->params('user_id');
+    $event_id = $req->params('event_id');
+    $interests = json_decode($req->params('interest_ids'));
+		
+    $interest_ids = "";
+    
+    try{
+           
+           	foreach($interests as $interest_id){
+
+			  $interest_ids = $interest_ids.$interest_id.",";
+    
+     		  $sql = "SELECT * FROM event_interests WHERE user_id=$user_id AND event_id = $event_id and interest_id=$interest_id";
+	   	      $stmt   = $db->query($sql);
+        	  $alreadyInterested  = $stmt->fetchColumn();
+
+			  if($alreadyInterested == 0){
+
+				$sql = "INSERT INTO event_interests (user_id,interest_id,event_id,datetime) values (:user_id,:interest_id,:event_id,:datetime)";
+				$stmt = $db->prepare($sql);
+				$stmt->bindParam("user_id", $user_id);
+				$stmt->bindParam("event_id", $event_id);
+				$stmt->bindParam("interest_id", $interest_id);
+				$stmt->bindParam("datetime", $date);
+
+				$stmt->execute();
+
+				}
+            
+            }
+
+			$sql = "DELETE FROM event_interests WHERE user_id=$user_id AND event_id = $event_id AND INTEREST_ID NOT IN (".rtrim($interest_ids,",").")";
+			$stmt   = $db->query($sql);
+			$stmt->execute();
+ 				
+            $response["header"]["error"] = 0;
+            $response["header"]["message"] = "Success";
+        
+
+    }
+    catch(PDOException $e){
+        $response["header"]["error"] = 1;
+        $response["header"]["message"] = $e->getMessage();
+    }
+
+    $app->response()->header("Content-Type", "application/json");
+    echo json_encode($response);
+}
+
+
 
 function getUsers()
 {
@@ -1633,6 +1860,8 @@ function getNearByUser($latitude,$longitude)
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
 }
+
+
 
 
 

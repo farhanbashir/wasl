@@ -147,7 +147,7 @@ function getInterest()
 
 }
 
-function getUserInterests($user_id)
+function getUserInterests($user_id,$return=false)
 {
 	global $app ,$db, $response;
 	$users = array();
@@ -155,11 +155,12 @@ function getUserInterests($user_id)
      $sql = "SELECT i.id,i.name,i.status 
 			FROM  `user_interests` eui,  `interests` i
 			WHERE i.id = eui.interest_id
+			AND i.status = 1
 			AND eui.user_id =".$user_id;
 
     try{
         $stmt   = $db->query($sql);
-        $users  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        $userInterest  = $stmt->fetchAll(PDO::FETCH_NAMED);
         $response["header"]["error"] = 0;
         $response["header"]["message"] = "Success";
     }
@@ -168,9 +169,9 @@ function getUserInterests($user_id)
         $response["header"]["message"] = $e->getMessage();
     }
 
-
-
-    $response["body"] = $users;
+	if($return)
+		return $userInterest;	
+    $response["body"] = $userInterest;
 
     $app->response()->header("Content-Type", "application/json");
     echo json_encode($response);
@@ -550,6 +551,8 @@ function getProfile($params){
         //$stmt   = $db->query($sql);
         $info  = $stmt->fetch(PDO::FETCH_NAMED);
 
+		$user_interests = getUserInterests($target_id,true);
+		
         if(is_array($info))
         {
             if($user_id != "")
@@ -600,8 +603,11 @@ function getProfile($params){
 
             }
 
-
-
+			if(count($user_interests) > 0 )
+				$info['interests'] = $user_interests;
+			else
+				$info['interests'] = array();
+						
             $response["header"]["error"] = 0;
             $response["header"]["message"] = "Success";
             $response["body"] = $info;

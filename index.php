@@ -181,16 +181,21 @@ function getUserInterests($user_id,$return=false)
 
 
 
-function getEventInterests($event_id)
+function getEventInterests($event_id,$return=0)
 {
 	global $app ,$db, $response;
 	$users = array();
 
-     $sql = "SELECT * FROM `event_interests` eui , `interests` i where i.id = eui.event_id and eui.event_id = ".$event_id." and i.status=1 ";
-
+    $sql = "SELECT i.id,i.name FROM `event_interests` eui , `interests` i where i.id = eui.interest_id and eui.event_id = ".$event_id." and i.status=1 ";
+    
     try{
         $stmt   = $db->query($sql);
-        $users  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        $eventInterests  = $stmt->fetchAll(PDO::FETCH_NAMED);
+        if($return == 1){
+        
+        	return $eventInterests;
+        }
+        
         $response["header"]["error"] = 0;
         $response["header"]["message"] = "Success";
     }
@@ -257,7 +262,7 @@ function addUserInterests()
 			*/	
  				
             $response["header"]["error"] = 0;
-            $response["header"]["message"] = "Success";
+            $response["header"]["message"] = "You have successfully updated your interests.";
         
 
     }
@@ -270,15 +275,15 @@ function addUserInterests()
     echo json_encode($response);
 }
 
-function addUpdateEventInterests()
+function addUpdateEventInterests($user_id,$event_id,$interest_ids,$app,$db,$response)
 {
-    global $app ,$db, $response;
+    
+    //global $app ,$db, $response;
     $req = $app->request();
     
-    $user_id = $req->params('user_id');
-    $event_id = $req->params('event_id');
-    $interests = json_decode($req->params('interest_ids'));
-		
+    $date = date("Y-m-d h:i:s");
+    $interests = json_decode($interest_ids);
+			
     $interest_ids = "";
     
     try{
@@ -309,7 +314,8 @@ function addUpdateEventInterests()
 			$sql = "DELETE FROM event_interests WHERE user_id=$user_id AND event_id = $event_id AND INTEREST_ID NOT IN (".rtrim($interest_ids,",").")";
 			$stmt   = $db->query($sql);
 			$stmt->execute();
- 				
+
+ 			return;	
             $response["header"]["error"] = 0;
             $response["header"]["message"] = "Success";
         
@@ -1274,8 +1280,7 @@ function getMyEvents($params)
                 $users_list = getUserListArray($event['id']);
                 $following_users = getFollowingInternal($user_id);
                 $follower_users = getFollowerInternal($user_id);
-
-
+				$eventInterests = getEventInterests($event['id'],1);
                 $users_list = getIsFollowed($users_list, $following_users);
 
                 $users_list = getIsFollower($users_list, $following_users);
@@ -1294,6 +1299,13 @@ function getMyEvents($params)
                 {
                     $user_events[$i]['users_list'] = $users_list;
                 }
+				
+				if(count($eventInterests)>0)
+                {
+                    $user_events[$i]['interests'] = $eventInterests;
+                }
+
+
                 $i++;
 
             }
@@ -1940,6 +1952,8 @@ function createEvent()
     $latitude = $req->params('latitude');
     $longitude = $req->params('longitude');
     $user_id = $req->params('user_id');
+    $interest_ids = $req->params('interests');
+    
     $image = '';
 
     if(isset($_FILES['file']))
@@ -2001,9 +2015,12 @@ function createEvent()
                 $stmt->bindParam("event_id", $event_id);
                 $stmt->bindParam("datetime", $date);
                 $stmt->execute();
+                
+                if($interest_ids)
+       		         addUpdateEventInterests($user_id,$event_id,$interest_ids,$app,$db,$response);
 
                 $response["header"]["error"] = 0;
-                $response["header"]["message"] = "Success";
+                $response["header"]["message"] = "Event posted successfully.";
             }
 
         }
@@ -2096,7 +2113,7 @@ function updateEvent()
                         $stmt->execute();
 
                         $response["header"]["error"] = 0;
-                        $response["header"]["message"] = "Success";
+                        $response["header"]["message"] = "Updated successfully.";
 
 
                 }
